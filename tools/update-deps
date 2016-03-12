@@ -5,6 +5,9 @@ import shutil
 import subprocess
 import sys
 
+# Disable buffering.
+sys.stdout = os.fdopen(sys.stdout.fileno(), 'w', 0)
+
 if len(sys.argv) == 1:
 	kWork = os.path.join('deps', sys.platform)
 elif len(sys.argv) == 2:
