@@ -1,0 +1,31 @@
+<html>
+	<head>
+		<title>Tilde Friends</title>
+		<link type="text/css" rel="stylesheet" href="/terminal/style.css"></link>
+		<link type="image/png" rel="shortcut icon" href="/terminal/favicon.png"></link>
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+	</head>
+	<body>
+		<div id="body">
+			<div class="navigation">
+				<span>~😎</span>
+				<span id="title">Tilde Friends</span>
+				<a href="/">home</a>
+				<a href="$(EDIT_SOURCE)">edit</a>
+				<a href="$(VIEW_SOURCE)">view source</a>
+				<a href="/~cory/about">about</a>
+				<span id="status"></span>
+				<span id="update">update available! <a href="">refresh</a> to update</span>
+				<span id="login"></span>
+			</div>
+			<div id="terminals" class="vbox"><div id="terminal_" class="terminal"></div></div>
+			<div class="input">
+				<span id="target"></span>
+				<span id="prompt">&gt;</span>
+				<input type='text' id='input'></input>
+			</div>
+			<script src="//code.jquery.com/jquery-1.11.0.min.js"></script>
+			<script src="/terminal/client.js"></script>
+		</div>
+	</body>
+</html>

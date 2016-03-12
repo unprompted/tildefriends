@@ -1,0 +1,65 @@
+= SandboxOS =
+
+I embedded a JavaScript engine in a C++ application and used it to make some webapps.  I made a wiki with it.  That is what you are looking at.  It's not especially good, but the interesting part is that you, as a visitor to this web site, have the power to rewrite the wiki webapp itself into something better.
+
+== Goals ==
+I've tried writing lofty descriptions about why I think this is cool, but I'm bad at that part.
+
+Goals include:
+
+=== 1. Make it easy to run servers. ===
+ * SandboxOS can be made to run on lots of platforms.
+ * SandboxOS can be made trivial to install.  I want to put it in app stores.
+ * SandboxOS is an app store in itself, so think "installing blogging software == installing a mobile game".  And then think of a webapp that is 10x better than that.
+=== 2. Make a thing that is by default pretty secure. ===
+ * Actual access to most system resources (filesystem + network, currently) is restricted to a few apps that hand it out in very limited ways.
+ * Apps will only get access to resources when granted by the user.  Think iOS or Android.
+ * The idea is that it can be made as secure as Google Chrome.  It currently uses V8 and process isolation, but there's a lot more to do.  In the end I want to trust installing random apps as much as or more than I trust visiting shady web sites.
+ * But security is nothing if you can't do cool stuff.  I want to make weird social music players and things to manipulate photos on my phone from my desktop.
+=== 3. Free software idealism ===
+ * This is Wikipedia but for apps?
+ * Make distributed versions of things that Google/Apple/Facebook dominate?
+ * Something about software architecture and making small tools that fit together to do neat things.
+=== 4. Fun ===
+ * I get a kick out of making all of this stuff from scratch.  The stack is getting pretty high, and it's just getting started.
+ * This hopefully lowers the barrier to entry to making little webapps, since you can use my server and make something with ~2 files that you edited like something on Google Docs.
+
+== How to Get Started ==
+
+{{{
+#!html
+<ol>
+<li>Visit the <a href="/tasks">/tasks</a> page.</li>
+<li>Pick a task (hint: consider <b>helloworld</b>, <b>wiki</b>, or <b>chat</b>).  Click edit.  You will probably have to log in at this point.</li>
+<li>Make modifications.</li>
+<li>Click install.</li>
+<li>Visit your updated task's URL and see it updated.</li>
+<li>Ask questions.  Either stick them here on the wiki somewhere, or email <a href="mailto:sandbox@unprompted.com">Cory</a>.</li>
+</ol>
+}}}
+
+It should be difficult to do anything too disruptive, and there are backups if you do.  '''Don't worry about breaking things.'''
+
+It's easy to make things fail silently.  I'm starting to improve that.  '''Use the log task.'''
+
+There are probably ways to do bad things if you try hard.  '''Please don't be mean.'''
+
+== TODO ==
+In no particular order:
+ * Set limits for everything.  n anonymous users can each make m tasks with p MB of storage and can make q HTTP request per second.
+ * Make some sort of TODO / bug tracker to replace this task list.
+ * Establish some conventions for non-webapp tasks.  Maybe make a shell that lets you run code from any task that exposes it.
+ * Establish some conventions for HTML fragments.  Include a persistent HTML header in every page or something like that.
+ * Make an app store.  Not too important until we have multiple installs but pretty important.
+ * Lots of the API exposed from C++ isn't async but should be.
+ * Pick a name for this thing.
+ * ~~Set up an [https://www.unprompted.com/projects/build/sandboxos automated build].~~
+ * Feedback is really bad or missing.  If you break a task, it might just stop responding to web requests.  I have the benefit of being able to see console output, but that's really noisy and bad.  There might be times where it is necessary to restart the whole process.  Ultimately there should be a way to see feedback when you've broken something, and things should be hardened so that you can't take down the whole system without abusing administrative rights.
+ * Security here is not good at the moment.  I'm essentially trusting you to please don't do bad things.  I've taken some steps to harden this thing, but it has a long way to go.
+ * ~~Inter-task messaging is really awkward to type.  And the way you need to respond to httpd requests is even weirder.  I will work on this.  It should be possible to get most things close to being first-class function calls, except asynchronous.~~
+ * ~~Make this wiki actually use some sort of wiki syntax.  HTML is too 90s.~~
+ * ~~The C++ program needs to use separate processes for each task in order to prevent OOM situations in one task from taking down the whole process.~~
+ * ~~The C++ program needs to build and run on Windows.~~  It needs to do so as transparently in the background as possible while still being trivial to acquire and start (Windows service / system tray icon).
+ * ~~Need to implement a real security model.  I was thinking once this has an authentication task, everything can use that to enforce that nobody but administrators changed the core tasks and that anonymous and untrusted users don't do anything too malicious.~~
+ * ~~Be able to marshal functions across task boundaries so that the httpd task can return a request object that has the same API as node.js.  I think this will greatly simplify the client code for webapps.~~
+ * ~~Need to implement something like proper javascript requires() and package dependencies for code sharing.~~
