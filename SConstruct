@@ -94,9 +94,9 @@ if env['package'] and sys.platform == 'win32':
 	files += listAllFiles('packages')
 	files += listAllFiles('core')
 	env.Package(
-		NAME='SandboxOS',
-		target='dist/SandboxOS-win32.zip',
+		NAME='TildeFriends',
+		target='dist/TildeFriends-win32.zip',
 		PACKAGETYPE='zip',
-		PACKAGEROOT='SandboxOS-win32',
+		PACKAGEROOT='TildeFriends-win32',
 		source=files
 	)

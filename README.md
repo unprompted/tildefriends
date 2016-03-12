@@ -17,16 +17,11 @@ Tilde Friends is [routinely](https://www.unprompted.com/projects/build/tildefrie
   ```
 
 ## Running
-Running the built sandbox executable will start a web server.  This is a good starting point: <http://localhost:12345/tasks>.
+Running the built tildefriends executable will start a web server.  This is a good starting point: <http://localhost:12345/tasks>.
 
-To grant users administrator privileges, create a JSON file named data/auth/permissions.js containing a list of users and their permissions, like this:
-```
-{
-  "cory": ["administrator"]
-}
-```
+The first use to create an account and log in will be granted administrative privileges.  Everything can be managed entirely from the web interface.
 
-This is a work in progress.  Everything else can be managed entirely from the web interface.
+This is a work in progress.
 
 ## License
 All code unless otherwise noted in [COPYING](https://www.unprompted.com/projects/browser/projects/tildefriends/trunk/COPYING) is provided under the [Affero GPL 3.0](https://www.unprompted.com/projects/browser/projects/tildefriends/trunk/LICENSE) license.
