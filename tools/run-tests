@@ -66,3 +66,4 @@ for test in selectedTests:
 		shutil.rmtree(tmp)
 
 print passCount, 'tests passed. ', failCount, 'tests failed.'
+exit(failCount)
