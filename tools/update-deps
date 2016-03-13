@@ -82,7 +82,7 @@ def updateV8():
 	# XXX We modify one .py file which assumes invalid things.
 	if os.path.isfile(os.path.join(kV8Work, 'tools/swarming_client/third_party/requests/packages/urllib3/contrib/pyopenssl.py')):
 		print 'resetting tools/swarming_client'
-		subprocess.check_call(['git', 'reset', '--hard'], cwd=os.path.join(kV8Work, 'tools', 'swarming_client'))
+		print subprocess.check_call(['git', 'checkout', '.'], cwd=os.path.join(kV8Work, 'tools', 'swarming_client'))
 
 	extension = ''
 	if sys.platform == 'win32':
