@@ -31,4 +31,4 @@ if (expected.length) {
 }
 EOF
 
-$SANDBOXOS test.js
+$TILDEFRIENDS test.js

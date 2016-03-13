@@ -4,4 +4,4 @@ cat > test.js << EOF
 print("hi");
 EOF
 
-valgrind --log-file=$LOGDIR/valgrind.log $SANDBOXOS test.js
+valgrind --log-file=$LOGDIR/valgrind.log $TILDEFRIENDS test.js

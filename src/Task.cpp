@@ -257,7 +257,8 @@ void Task::kill() {
 	}
 }
 
-void Task::execute(const char* fileName) {
+bool Task::execute(const char* fileName) {
+	bool executed = false;
 	v8::Isolate::Scope isolateScope(_isolate);
 	v8::HandleScope handleScope(_isolate);
 	v8::Context::Scope contextScope(v8::Local<v8::Context>::New(_isolate, _context));
@@ -274,6 +275,7 @@ void Task::execute(const char* fileName) {
 		if (!script.IsEmpty()) {
 			script->Run();
 			std::cout << "Script " << fileName << " completed\n";
+			executed = true;
 		} else {
 			std::cerr << "Failed to compile: " << fileName << ".\n";
 		}
@@ -283,6 +285,7 @@ void Task::execute(const char* fileName) {
 		message += fileName;
 		_isolate->ThrowException(v8::Exception::Error(v8::String::NewFromUtf8(_isolate, message.c_str())));
 	}
+	return executed;
 }
 
 void Task::invokeExport(const v8::FunctionCallbackInfo<v8::Value>& args) {

@@ -16,4 +16,4 @@ print("I am the child process.");
 exit(0);
 EOF
 
-$SANDBOXOS test.js
+$TILDEFRIENDS test.js

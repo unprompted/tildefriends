@@ -9,6 +9,7 @@ class TaskTryCatch {
 public:
 	TaskTryCatch(Task* task);
 	~TaskTryCatch();
+	bool hasCaught();
 
 private:
 	v8::TryCatch _tryCatch;

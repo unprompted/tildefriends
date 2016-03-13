@@ -6,4 +6,4 @@ task.activate.bind(null).apply();
 exit(0);
 EOF
 
-$SANDBOXOS test.js
+$TILDEFRIENDS test.js

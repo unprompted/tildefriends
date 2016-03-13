@@ -55,3 +55,8 @@ TaskTryCatch::~TaskTryCatch() {
 		}
 	}
 }
+
+bool TaskTryCatch::hasCaught()
+{
+	return _tryCatch.HasCaught();
+}

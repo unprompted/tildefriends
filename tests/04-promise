@@ -24,4 +24,4 @@ exports = {
 }
 EOF
 
-$SANDBOXOS test.js
+$TILDEFRIENDS test.js

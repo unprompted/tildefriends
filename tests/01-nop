@@ -4,4 +4,4 @@ cat > test.js << EOF
 print("hi");
 EOF
 
-$SANDBOXOS test.js
+$TILDEFRIENDS test.js

@@ -74,7 +74,7 @@ public:
 
 	void configureFromStdin();
 	void setTrusted(bool trusted) { _trusted = trusted; }
-	void execute(const char* fileName);
+	bool execute(const char* fileName);
 	void activate();
 	void run();
 

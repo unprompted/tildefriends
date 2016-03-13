@@ -18,6 +18,7 @@ v8::Platform* gPlatform = 0;
 
 
 int main(int argc, char* argv[]) {
+	int result = 0;
 	uv_setup_args(argc, argv);
 	TaskStub::initialize();
 	v8::V8::InitializeICU();
@@ -64,12 +65,23 @@ int main(int argc, char* argv[]) {
 			v8::HandleScope handleScope(task.getIsolate());
 			v8::Context::Scope contextScope(task.getContext());
 			TaskTryCatch tryCatch(&task);
-			task.execute(coreTask);
+			if (!task.execute(coreTask))
+			{
+				result = -1;
+			}
+			if (tryCatch.hasCaught())
+			{
+				result = -2;
+			}
 		}
-		task.run();
+
+		if (result == 0)
+		{
+			task.run();
+		}
 	}
 
 	v8::V8::Dispose();
 
-	return 0;
+	return result;
 }
