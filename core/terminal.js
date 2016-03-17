@@ -201,13 +201,17 @@ function handler(request, response, packageOwner, packageName, uri) {
 				options.userName = credentials.session.name;
 			}
 			options.credentials = credentials;
-			var sessionId = form.decodeForm(request.query).sessionId;
-			var isNewSession = false;
-			if (!getSessionProcess(packageOwner, packageName, sessionId, {create: false})) {
-				sessionId = makeSessionId();
-				isNewSession = true;
+			if (uri == "/submit") {
+				process = getServiceProcess(packageOwner, packageName, "submit");
+			} else {
+				var sessionId = form.decodeForm(request.query).sessionId;
+				var isNewSession = false;
+				if (!getSessionProcess(packageOwner, packageName, sessionId, {create: false})) {
+					sessionId = makeSessionId();
+					isNewSession = true;
+				}
+				process = getSessionProcess(packageOwner, packageName, sessionId, options);
 			}
-			process = getSessionProcess(packageOwner, packageName, sessionId, options);
 			process.lastActive = Date.now();
 
 			if (uri === "/send") {
@@ -243,14 +247,10 @@ function handler(request, response, packageOwner, packageName, uri) {
 						process.terminal.print(error);
 					});
 				}
-			} else if (uri === "/post") {
-				if (isNewSession) {
-					response.writeHead(403, {"Content-Type": "text/plain; charset=utf-8"});
-					print("post too soon");
-					response.end("Too soon.");
-				} else {
-					var payload = JSON.parse(request.body);
-					return invoke(process.eventHandlers['onPost'], [payload]).then(function() {
+			} else if (uri === "/submit") {
+				return process.ready.then(function() {
+					var payload = form.decodeForm(request.body, form.decodeForm(request.query));
+					return invoke(process.eventHandlers['onSubmit'], [payload]).then(function() {
 						response.writeHead(200, {
 							"Content-Type": "text/plain; charset=utf-8",
 							"Content-Length": "0",
@@ -258,9 +258,9 @@ function handler(request, response, packageOwner, packageName, uri) {
 							"Pragma": "no-cache",
 							"Expires": "0",
 						});
-						response.end("");
+						return response.end("");
 					});
-				}
+				});
 			} else if (uri === "/receive") {
 				if (isNewSession) {
 					var data = JSON.stringify({

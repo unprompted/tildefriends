@@ -147,7 +147,6 @@ function handleRequest(request, response) {
 			var promise = handler.invoke(request, response);
 			if (promise) {
 				promise.catch(function(error) {
-					print(error);
 					response.reportError(error);
 				});
 			}
