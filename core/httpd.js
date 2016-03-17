@@ -60,6 +60,7 @@ function Response(request, client) {
 	var kStatusText = {
 		200: 'OK',
 		303: 'See other',
+		403: 'Forbidden',
 		404: 'File not found',
 		500: 'Internal server error',
 	};
@@ -143,8 +144,15 @@ function handleRequest(request, response) {
 
 	if (handler) {
 		try {
-			handler.invoke(request, response);
+			var promise = handler.invoke(request, response);
+			if (promise) {
+				promise.catch(function(error) {
+					print(error);
+					response.reportError(error);
+				});
+			}
 		} catch (error) {
+			print(error);
 			response.reportError(error);
 		}
 	} else {

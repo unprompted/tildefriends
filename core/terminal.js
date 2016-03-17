@@ -243,6 +243,24 @@ function handler(request, response, packageOwner, packageName, uri) {
 						process.terminal.print(error);
 					});
 				}
+			} else if (uri === "/post") {
+				if (isNewSession) {
+					response.writeHead(403, {"Content-Type": "text/plain; charset=utf-8"});
+					print("post too soon");
+					response.end("Too soon.");
+				} else {
+					var payload = JSON.parse(request.body);
+					return invoke(process.eventHandlers['onPost'], [payload]).then(function() {
+						response.writeHead(200, {
+							"Content-Type": "text/plain; charset=utf-8",
+							"Content-Length": "0",
+							"Cache-Control": "no-cache, no-store, must-revalidate",
+							"Pragma": "no-cache",
+							"Expires": "0",
+						});
+						response.end("");
+					});
+				}
 			} else if (uri === "/receive") {
 				if (isNewSession) {
 					var data = JSON.stringify({
