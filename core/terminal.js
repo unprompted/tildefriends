@@ -203,6 +203,8 @@ function handler(request, response, packageOwner, packageName, uri) {
 			options.credentials = credentials;
 			if (uri == "/submit") {
 				process = getServiceProcess(packageOwner, packageName, "submit");
+			} else if (uri == "/atom") {
+				process = getServiceProcess(packageOwner, packageName, "atom");
 			} else {
 				var sessionId = form.decodeForm(request.query).sessionId;
 				var isNewSession = false;
@@ -259,6 +261,21 @@ function handler(request, response, packageOwner, packageName, uri) {
 							"Expires": "0",
 						});
 						return response.end("");
+					});
+				});
+			} else if (uri === "/atom") {
+				return process.ready.then(function() {
+					var payload = form.decodeForm(request.body, form.decodeForm(request.query));
+					return invoke(process.eventHandlers['onAtom'], [payload]).then(function(content) {
+						var atomContent = content.join();
+						response.writeHead(200, {
+							"Content-Type": "application/atom+xml; charset=utf-8",
+							"Content-Length": atomContent.length.toString(),
+							"Cache-Control": "no-cache, no-store, must-revalidate",
+							"Pragma": "no-cache",
+							"Expires": "0",
+						});
+						return response.end(atomContent);
 					});
 				});
 			} else if (uri === "/receive") {
