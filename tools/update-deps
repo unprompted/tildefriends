@@ -25,6 +25,10 @@ kV8Repository = 'https://github.com/v8/v8.git'
 kV8Branch = 'branch-heads/4.9'
 kV8Work = 'v8'
 
+def run(*args, **kw):
+	print 'Running:', args, kw
+	subprocess.check_call(*args, **kw)
+
 def updateUv():
 	print 'libuv'
 	print
@@ -43,23 +47,23 @@ def updateUv():
 			print 'Cleaning', kUvWork
 			shutil.rmtree(os.path.join(kUvWork))
 	if not os.path.isdir(kUvWork):
-		subprocess.check_call(['git', 'clone', '--branch', kUvBranch, kUvRepository, kUvWork])
+		run(['git', 'clone', '--branch', kUvBranch, kUvRepository, kUvWork])
 	open(os.path.join(kUvWork, '.update-deps-branch'), 'w').write(kUvBranch)
 	if sys.platform in ('darwin', 'win32'):
 		if not os.path.isdir(os.path.join(kUvWork, 'build', 'gyp')):
-			subprocess.check_call(['git', 'clone', 'https://chromium.googlesource.com/external/gyp.git', 'build/gyp'], cwd=kUvWork)
+			run(['git', 'clone', 'https://chromium.googlesource.com/external/gyp.git', 'build/gyp'], cwd=kUvWork)
 
 	if sys.platform == 'linux2':
-		subprocess.check_call(['./gyp_uv.py', '-f', 'make'], cwd=kUvWork)
-		subprocess.check_call(['make', '-j8', '-C', 'out'], cwd=kUvWork)
+		run(['./gyp_uv.py', '-f', 'make'], cwd=kUvWork)
+		run(['make', '-j8', '-C', 'out'], cwd=kUvWork)
 	elif sys.platform == 'darwin':
-		subprocess.check_call(['./gyp_uv.py', '-f', 'xcode'], cwd=kUvWork)
-		subprocess.check_call(['xcodebuild', '-ARCHS="x86_64"', '-project', 'uv.xcodeproj', '-configuration', 'Release', '-target', 'All'], cwd=kUvWork)
+		run(['./gyp_uv.py', '-f', 'xcode'], cwd=kUvWork)
+		run(['xcodebuild', '-ARCHS="x86_64"', '-project', 'uv.xcodeproj', '-configuration', 'Release', '-target', 'All'], cwd=kUvWork)
 	elif sys.platform == 'win32':
 		env = os.environ.copy()
 		env['VCINSTALLDIR'] = ''
 		env['WINDOWSSDKDIR'] = ''
-		subprocess.check_call(['cmd', '/C', 'call', 'vcbuild.bat', 'release', 'x64'], cwd=kUvWork, env=env)
+		run(['cmd', '/C', 'call', 'vcbuild.bat', 'release', 'x64'], cwd=kUvWork, env=env)
 
 def updateV8():
 	print 'v8'
@@ -82,39 +86,39 @@ def updateV8():
 	# XXX We modify one .py file which assumes invalid things.
 	if os.path.isfile(os.path.join(kV8Work, 'tools/swarming_client/third_party/requests/packages/urllib3/contrib/pyopenssl.py')):
 		print 'resetting tools/swarming_client'
-		print subprocess.check_call(['git', 'checkout', '.'], cwd=os.path.join(kV8Work, 'tools', 'swarming_client'))
+		print run(['git', 'checkout', '.'], cwd=os.path.join(kV8Work, 'tools', 'swarming_client'))
 
 	extension = ''
 	if sys.platform == 'win32':
 		extension = '.bat'
 	if not os.path.isdir(kV8Work):
-		subprocess.check_call(['fetch' + extension, 'v8'])
+		run(['fetch' + extension, 'v8'])
 
 	win32Env = os.environ.copy()
 	win32Env['GYP_MSVS_VERSION'] = '2013'
 	win32Env['DEPOT_TOOLS_WIN_TOOLCHAIN'] = '0'
 
 	open(os.path.join(kV8Work, '.update-deps-branch'), 'w').write(kV8Branch)
-	subprocess.check_call(['git', 'fetch'], cwd=kV8Work)
-	subprocess.check_call(['git', 'checkout', kV8Branch], cwd=kV8Work)
+	run(['git', 'fetch'], cwd=kV8Work)
+	run(['git', 'checkout', kV8Branch], cwd=kV8Work)
 
 	if sys.platform == 'win32':
-		subprocess.check_call(['gclient' + extension, 'sync'], cwd=kV8Work, env=win32Env)
+		run(['gclient' + extension, 'sync'], cwd=kV8Work, env=win32Env)
 	else:
-		subprocess.check_call(['gclient' + extension, 'sync'], cwd=kV8Work)
+		run(['gclient' + extension, 'sync'], cwd=kV8Work)
 
 	contents = open(os.path.join(kV8Work, 'tools/swarming_client/third_party/requests/packages/urllib3/contrib/pyopenssl.py'), 'r').readlines()
 	contents = [line for line in contents if not 'SSLv3' in line]
 	open(os.path.join(kV8Work, 'tools/swarming_client/third_party/requests/packages/urllib3/contrib/pyopenssl.py'), 'w').write(''.join(contents))
 
 	if sys.platform == 'linux2':
-		subprocess.check_call(['make', '-j4', 'native'], cwd=kV8Work)
+		run(['make', '-j4', 'native'], cwd=kV8Work)
 	elif sys.platform == 'darwin':
-		subprocess.check_call(['build/gyp_v8', '-Dtarget_arch=x64'], cwd=kV8Work)
-		subprocess.check_call(['xcodebuild', '-project', 'build/all.xcodeproj', '-configuration', 'Release'], cwd=kV8Work)
+		run(['build/gyp_v8', '-Dtarget_arch=x64'], cwd=kV8Work)
+		run(['xcodebuild', '-project', 'build/all.xcodeproj', '-configuration', 'Release'], cwd=kV8Work)
 	elif sys.platform == 'win32':
-		subprocess.check_call(['python', 'build\\gyp_v8', '-Dtarget_arch=x64'], cwd=kV8Work, env=win32Env)
-		subprocess.check_call(['devenv.com', '/Build', 'Release', 'build\\All.sln'], cwd=kV8Work)
+		run(['python', 'build\\gyp_v8', '-Dtarget_arch=x64'], cwd=kV8Work, env=win32Env)
+		run(['devenv.com', '/Build', 'Release', 'build\\All.sln'], cwd=kV8Work)
 
 if __name__ == '__main__':
 	updateUv()
