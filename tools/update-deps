@@ -83,10 +83,11 @@ def updateV8():
 		if os.path.isdir(kV8Work):
 			shutil.rmtree(kV8Work)
 
-	# XXX We modify one .py file which assumes invalid things.
-	if os.path.isfile(os.path.join(kV8Work, 'tools/swarming_client/third_party/requests/packages/urllib3/contrib/pyopenssl.py')):
-		print 'resetting tools/swarming_client'
-		print run(['git', 'checkout', '.'], cwd=os.path.join(kV8Work, 'tools', 'swarming_client'))
+	if sys.platform == 'linux2':
+		# XXX Modify this one .py file which assumes things that conflict with my debian environment.
+		if os.path.isfile(os.path.join(kV8Work, 'tools/swarming_client/third_party/requests/packages/urllib3/contrib/pyopenssl.py')):
+			print 'resetting tools/swarming_client'
+			print run(['git', 'checkout', '.'], cwd=os.path.join(kV8Work, 'tools', 'swarming_client'))
 
 	extension = ''
 	if sys.platform == 'win32':
@@ -107,9 +108,10 @@ def updateV8():
 	else:
 		run(['gclient' + extension, 'sync'], cwd=kV8Work)
 
-	contents = open(os.path.join(kV8Work, 'tools/swarming_client/third_party/requests/packages/urllib3/contrib/pyopenssl.py'), 'r').readlines()
-	contents = [line for line in contents if not 'SSLv3' in line]
-	open(os.path.join(kV8Work, 'tools/swarming_client/third_party/requests/packages/urllib3/contrib/pyopenssl.py'), 'w').write(''.join(contents))
+	if sys.platform == 'linux2':
+		contents = open(os.path.join(kV8Work, 'tools/swarming_client/third_party/requests/packages/urllib3/contrib/pyopenssl.py'), 'r').readlines()
+		contents = [line for line in contents if not 'SSLv3' in line]
+		open(os.path.join(kV8Work, 'tools/swarming_client/third_party/requests/packages/urllib3/contrib/pyopenssl.py'), 'w').write(''.join(contents))
 
 	if sys.platform == 'linux2':
 		run(['make', '-j4', 'native'], cwd=kV8Work)
