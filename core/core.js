@@ -303,6 +303,8 @@ function getProcess(packageOwner, packageName, key, options) {
 					'split': process.terminal.split.bind(process.terminal),
 					'select': process.terminal.select.bind(process.terminal),
 					'postMessageToIframe': process.terminal.postMessageToIframe.bind(process.terminal),
+					'cork': process.terminal.cork.bind(process.terminal),
+					'uncork': process.terminal.uncork.bind(process.terminal),
 				};
 			}
 			if (manifest

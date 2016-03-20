@@ -23,6 +23,7 @@ function Terminal() {
 	this._echo = true;
 	this._readLine = null;
 	this._selected = null;
+	this._corked = 0;
 	return this;
 }
 
@@ -30,9 +31,20 @@ Terminal.kBacklog = 64;
 
 Terminal.prototype.dispatch = function(data) {
 	for (var i in this._waiting) {
-		this._waiting[i](data);
+		this.feedWaiting(this._waiting[i], data);
 	}
 	this._waiting.length = 0;
+}
+
+Terminal.prototype.feedWaiting = function(waiting, data) {
+	var terminal = this;
+	var payload = terminal._lines.slice(Math.max(0, waiting.haveIndex + 1 - terminal._firstLine));
+	if (data) {
+		payload.push(data);
+	}
+	if (waiting.haveIndex < terminal._index - 1 || data) {
+		waiting.resolve({index: terminal._index - 1, lines: payload});
+	}
 }
 
 Terminal.prototype.print = function() {
@@ -49,7 +61,9 @@ Terminal.prototype.print = function() {
 		this._firstLine = this._index - Terminal.kBacklog;
 		this._lines = this._lines.slice(this._lines.length - Terminal.kBacklog);
 	}
-	this.dispatch({index: this._index - 1, lines: [data]});
+	if (this._corked == 0) {
+		this.dispatch();
+	}
 	this._lastWrite = new Date();
 }
 
@@ -106,7 +120,7 @@ Terminal.prototype.getOutput = function(haveIndex) {
 		if (haveIndex < terminal._index - 1) {
 			resolve({index: terminal._index - 1, lines: terminal._lines.slice(Math.max(0, haveIndex + 1 - terminal._firstLine))});
 		} else {
-			terminal._waiting.push(resolve);
+			terminal._waiting.push({haveIndex: haveIndex, resolve: resolve});
 		}
 	});
 }
@@ -123,6 +137,19 @@ Terminal.prototype.readLine = function() {
 	return new Promise(function(resolve, reject) {
 		self._readLine = [resolve, reject];
 	});
+}
+
+Terminal.prototype.cork = function() {
+	this._corked++;
+}
+
+Terminal.prototype.uncork = function() {
+	if (--this._corked == 0) {
+		for (var i = 0; i < this._waiting.length; i++) {
+			this.feedWaiting(this._waiting[i]);
+		}
+		this._waiting.length = 0;
+	}
 }
 
 function invoke(handlers, argv) {
