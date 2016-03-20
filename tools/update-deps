@@ -83,7 +83,7 @@ def updateV8():
 		if os.path.isdir(kV8Work):
 			shutil.rmtree(kV8Work)
 
-	if sys.platform == 'linux2':
+	if True or sys.platform == 'linux2':
 		# XXX Modify this one .py file which assumes things that conflict with my debian environment.
 		if os.path.isfile(os.path.join(kV8Work, 'tools/swarming_client/third_party/requests/packages/urllib3/contrib/pyopenssl.py')):
 			print 'resetting tools/swarming_client'
