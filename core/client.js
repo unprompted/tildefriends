@@ -266,13 +266,27 @@ function updateLogin() {
 	var a = document.createElement("a");
 	if (gCredentials && gCredentials.session) {
 		a.appendChild(document.createTextNode("logout " + gCredentials.session.name));
-		a.setAttribute("href", "/login/logout?return=" + encodeURIComponent(url()));
+		if (gCredentials.session.google) {
+			gapi.load("auth2", function() {
+				gapi.auth2.init();
+			});
+			a.setAttribute("onclick", "logoutGoogle()");
+			a.setAttribute("href", "#");
+		} else {
+			a.setAttribute("href", "/login/logout?return=" + encodeURIComponent(url()));
+		}
 	} else if (window.location.href.indexOf("?guest=1") != -1) {
 		window.location.href = "/login?submit=Proceed+as+Guest&return=" + encodeURIComponent(url());
 	} else {
 		window.location.href = "/login?return=" + encodeURIComponent(url());
 	}
 	login.appendChild(a);
+}
+
+function logoutGoogle() {
+	gapi.auth2.getAuthInstance().signOut().then(function() {
+		window.location.href = "/login/logout?return=" + encodeURIComponent(url());
+	});
 }
 
 var gOriginalInput;

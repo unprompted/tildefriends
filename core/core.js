@@ -279,6 +279,17 @@ function getProcess(packageOwner, packageName, key, options) {
 						}
 						process.eventHandlers[eventName].push(handler);
 					},
+					'unregister': function(eventHandle, handler) {
+						if (process.eventHandlers(eventName)) {
+							let index = process.eventHandlers[eventName].indexOf(handler);
+							if (index != -1) {
+								process.eventHandlers[eventName].splice(index, 1);
+							}
+							if (process.eventHandlers[eventName].length == 0) {
+								delete process.eventHandlers[eventName];
+							}
+						}
+					},
 					'getUser': getUser.bind(null, process, process),
 					'user': getUser(process, process),
 				},

@@ -178,6 +178,11 @@ function handler(request, response, packageOwner, packageName, uri) {
 				found = true;
 				var data = File.readFile("core/" + kStaticFiles[i].path);
 				if (kStaticFiles[i].uri == "") {
+					if (gGlobalSettings && gGlobalSettings['google-signin-client_id']) {
+						data = data.replace("<!--HEAD-->", `
+		<script src="https://apis.google.com/js/platform.js" async defer></script>
+		<meta name="google-signin-client_id" content="${gGlobalSettings['google-signin-client_id']}">`);
+					}
 					data = data.replace("$(VIEW_SOURCE)", "/~" + packageOwner + "/" + packageName + "/view");
 					data = data.replace("$(EDIT_SOURCE)", "/~" + packageOwner + "/" + packageName + "/edit");
 				} else if (kStaticFiles[i].uri == "/edit") {

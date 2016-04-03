@@ -100,7 +100,10 @@ core.register("onInput", function(input) {
 	if (input == "new post") {
 		startNewPost();
 	} else if (input == "submit") {
-		submitNewPost().then(renderBlog);
+		submitNewPost().then(function() {
+			core.unregister("onWindowMessage", onWindowMessage);
+			renderBlog();
+		});
 	}
 });
 
@@ -131,18 +134,19 @@ function submitNewPost() {
 	return gBlog.append(gNewPost);
 }
 
-function startNewPost() {
-	core.register("onWindowMessage", function(message) {
-		gNewPost = message.message;
-		terminal.cork();
-		terminal.select("right");
-		terminal.clear();
-		terminal.print({style: "font-width: x-large", value: message.message.title});
-		terminal.print(message.message.entry);
-		terminal.print({command: "submit"});
-		terminal.uncork();
-	});
+function onWindowMessage(message) {
+	gNewPost = message.message;
+	terminal.cork();
+	terminal.select("right");
+	terminal.clear();
+	terminal.print({style: "font-width: x-large", value: message.message.title});
+	terminal.print(message.message.entry);
+	terminal.print({command: "submit"});
+	terminal.uncork();
+}
 
+function startNewPost() {
+	core.register("onWindowMessage", onWindowMessage);
 	terminal.split([
 		{
 			type: "horizontal",

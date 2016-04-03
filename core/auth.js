@@ -8,6 +8,7 @@ var bCryptLib = require('bCrypt');
 bCrypt = new bCryptLib.bCrypt();
 
 var form = require('form');
+var http = require('http');
 
 File.makeDirectory("data");
 File.makeDirectory("data/auth");
@@ -108,6 +109,7 @@ function authHandler(request, response) {
 					}
 				} else {
 					if (gAccounts[formData.name] &&
+						gAccounts[formData.name].password &&
 						verifyPassword(formData.password, gAccounts[formData.name].password)) {
 						writeSession(session, {name: formData.name});
 						if (noAdministrator()) {
@@ -140,6 +142,44 @@ function authHandler(request, response) {
 				}
 				contents += '<div><a href="/login/logout">Logout</a></div>\n';
 			} else {
+				if (gGlobalSettings && gGlobalSettings['google-signin-client_id']) {
+					html = html.replace("<!--HEAD-->", `
+		<script src="https://apis.google.com/js/platform.js" async defer></script>
+		<meta name="google-signin-client_id" content="${gGlobalSettings['google-signin-client_id']}">
+		<script>
+			function onGoogleSignIn(user) {
+				var token = user.getAuthResponse().id_token;
+				var xhr = new XMLHttpRequest();
+				xhr.open("POST", "/login/google");
+				xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+				xhr.onload = function() {
+					if (xhr.status == 200) {
+						var redirected = false;
+						if (window.location.search.length) {
+							var query = window.location.search.substring(1);
+							var parts = query.split("&");
+							for (var i = 0; i < parts.length; i++) {
+								var part = decodeURIComponent(parts[i]);
+								var key = part.substring(0, part.indexOf('='));
+								var value = part.substring(part.indexOf('=') + 1);
+								if (key == "return") {
+									redirected = true;
+									window.location.href = value;
+								}
+							}
+						}
+						if (!redirected) {
+							window.location.path = "/";
+						}
+					} else {
+						alert(xhr.response);
+					}
+				};
+				xhr.send('token=' + token);
+			}
+		</script>
+		`);
+				}
 				contents += '<form method="POST">\n';
 				if (loginError) {
 					contents += "<p>" + loginError + "</p>\n";
@@ -157,13 +197,17 @@ function authHandler(request, response) {
 				contents += '<div><input id="loginButton" type="submit" name="submit" value="Login"></input></div>\n';
 				contents += '</div>';
 				contents += '<div id="auth_or"> - or - </div>';
+				if (gGlobalSettings && gGlobalSettings['google-signin-client_id']) {
+					contents += '<div class="g-signin2" data-onsuccess="onGoogleSignIn" data-scope="profile"></div>';
+					contents += '<div id="auth_or"> - or - </div>';
+				}
 				contents += '<div id="auth_guest">\n';
 				contents += '<input id="guestButton" type="submit" name="submit" value="Proceeed as Guest"></input>\n';
 				contents += '</div>\n';
 				contents += '</div>\n';
 				contents += '</form>';
 			}
-			var text = html.replace("$(SESSION)", contents);
+			var text = html.replace("<!--SESSION-->", contents);
 			response.writeHead(200, {"Content-Type": "text/html; charset=utf-6", "Set-Cookie": cookie, "Content-Length": text.length});
 			response.end(text);
 		}
@@ -171,10 +215,45 @@ function authHandler(request, response) {
 		removeSession(session);
 		response.writeHead(303, {"Set-Cookie": "session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT", "Location": "/login" + (request.query ? "?" + request.query : "")});
 		response.end();
+	} else if (request.uri == "/login/google") {
+		var formData = form.decodeForm(request.query, form.decodeForm(request.body));
+		return verifyGoogleToken(formData.token).then(function(user) {
+			if (user && user.aud == gGlobalSettings['google-signin-client_id']) {
+				session = newSession();
+				var userId = user.name;
+				if (gAccounts[userId] && !gAccounts[userId].google) {
+					response.writeHead(500, {"Content-Type": "text/plain; charset=utf-8", "Connection": "close"});
+					response.end("Account already exists and is not a Google account.");
+				} else {
+					if (!gAccounts[userId]) {
+						gAccounts[userId] = {google: true};
+						File.writeFile(kAccountsFile, JSON.stringify(gAccounts));
+						if (noAdministrator()) {
+							makeAdministrator(userId);
+						}
+					}
+
+					writeSession(session, {name: userId, google: true});
+
+					var cookie = "session=" + session + "; path=/; Max-Age=604800";
+					response.writeHead(200, {"Content-Type": "text/json; charset=utf-8", "Connection": "close", "Set-Cookie": cookie});
+					response.end(JSON.stringify(user));
+				}
+			} else {
+				response.writeHead(500, {"Content-Type": "text/plain; charset=utf-8", "Connection": "close"});
+				response.end();
+			}
+		});
 	} else {
 		response.writeHead(200, {"Content-Type": "text/plain; charset=utf-8", "Connection": "close"});
 		response.end("Hello, " + request.client.peerName + ".");
 	}
+}
+
+function verifyGoogleToken(token) {
+	return http.get("https://www.googleapis.com/oauth2/v3/tokeninfo?id_token=" + token).then(function(response) {
+		return JSON.parse(response.body);
+	});
 }
 
 function getPermissions(session) {

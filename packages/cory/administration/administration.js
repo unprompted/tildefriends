@@ -15,7 +15,7 @@ if (core.user.credentials.permissions &&
 		],
 		[
 			["set ", {class: "cyan", value: "key value"}],
-			["Set global setting key to value."],
+			["Set global setting key to value.  Omit value to unset."],
 		],
 		[
 			"permission list",
@@ -45,6 +45,7 @@ var kSimpleSettings = [
 	'httpPort',
 	'httpsPort',
 	'index',
+	'google-signin-client_id',
 ];
 
 function printSettings(settings) {
@@ -73,12 +74,16 @@ function onInput(input) {
 					terminal.print(" ".repeat(16 - s[i].toString().length), s[i].toString(), " ", i);
 				}
 			});
-		} else if (match = /^\s*set\s+(\w+)\s+(.*)/.exec(input)) {
+		} else if (match = /^\s*set\s+(\S+)(?:\s+(.*))?/.exec(input)) {
 			var key = match[1];
 			var value = match[2];
 			administration.getGlobalSettings().then(function(settings) {
 				if (kSimpleSettings.indexOf(key) != -1) {
-					settings[key] = value;
+					if (value) {
+						settings[key] = value;
+					} else {
+						delete settings[key];
+					}
 					administration.setGlobalSettings(settings).then(function() {
 						administration.getGlobalSettings().then(printSettings);
 					}).catch(function(error) {
