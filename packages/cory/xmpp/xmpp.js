@@ -665,7 +665,7 @@ XmlStanzaParser.prototype.parseNode = function(node) {
 
 // end xmpp.js
 
-var gFocus = false;
+var gFocus = true;
 var gUnread = 0;
 
 function updateTitle() {
@@ -792,10 +792,12 @@ var gPresence = {};
 
 function refreshUsers() {
 	terminal.select("users");
+	terminal.cork();
 	terminal.clear();
 	for (var i in gPresence) {
 		terminal.print(i);
 	}
+	terminal.uncork();
 	terminal.select("terminal");
 }
 
@@ -937,7 +939,7 @@ function connect(socket, userName, password) {
 						}
 						refreshUsers();
 					} else {
-						terminal.print(data);
+						terminal.print(JSON.stringify(data));
 					}
 				});
 			} catch (error) {

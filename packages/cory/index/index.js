@@ -16,6 +16,7 @@ function index() {
 			usersByApp["/~" + user.packageOwner + "/" + user.packageName].push(user.name);
 		}
 
+		terminal.cork();
 		terminal.clear();
 		terminal.print("Available applications [active users]:");
 		packages.sort(function(x, y) {
@@ -47,6 +48,7 @@ function index() {
 				{href: "/~" + app.owner + "/" + app.name},
 				message);
 		});
+		terminal.uncork();
 	});
 }
 

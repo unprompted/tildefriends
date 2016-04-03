@@ -110,7 +110,7 @@ Terminal.prototype.clear = function() {
 }
 
 Terminal.prototype.ping = function() {
-	this.dispatch({index: this._index - 1, lines: [{action: "ping"}]});
+	this.dispatch({action: "ping"});
 }
 
 Terminal.prototype.getOutput = function(haveIndex) {
