@@ -1,6 +1,7 @@
 "use strict";
 
 terminal.setEcho(false);
+terminal.setTitle("Live Markdeep Editor");
 
 core.register("onInput", function(input) {
 	if (input == "new page") {
@@ -27,8 +28,9 @@ core.register("onInput", function(input) {
 });
 
 function renderIndex() {
+	terminal.split([{name: "terminal"}]);
 	terminal.clear();
-	terminal.print("Editor Test");
+	terminal.print("Live Markdeep Editor");
 	if (core.user.credentials.permissions.authenticated) {
 		terminal.print({command: "new page"});
 	}
@@ -53,6 +55,13 @@ function renderIndex() {
 
 var gPage = null;
 
+core.register("hashChange", function(event) {
+	var title = event.hash.substring(1);
+	database.get(title).then(function(contents) {
+		editPage(title, contents);
+	});
+});
+
 core.register("onWindowMessage", function(event) {
 	if (event.message.ready) {
 		terminal.postMessageToIframe("iframe", {title: gPage.title, contents: gPage.contents});
@@ -67,37 +76,47 @@ core.register("onWindowMessage", function(event) {
 
 function editPage(title, contents) {
 	gPage = {title: title, contents: contents};
+	terminal.split([{name: "terminal", type: "vertical"}]);
 	terminal.clear();
 	terminal.print({iframe: `<html>
 		<head>
 			<script src="//cdnjs.cloudflare.com/ajax/libs/codemirror/5.13.2/codemirror.min.js"></script>
 			<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/codemirror/5.13.2/codemirror.min.css"></link>
 			<style>
-				html, body {
-					position: relative;
+				html {
+					height: 100%;
 					margin: 0;
 					padding: 0;
-					overflow: hidden;
+				}
+				body {
+					display: flex;
+					flex-direction: column;
 					height: 100%;
+					margin: 0;
+					padding: 0;
+				}
+				#menu {
+					flex: 0 0 auto;
 				}
 				#container {
+					flex: 1 1 auto;
 					display: flex;
 					flex-direction: row;
+					width: 100%;
+					background-color: white;
+				}
+				.CodeMirror {
+					width: 100%;
 					height: 100%;
 				}
-				textarea {
+				.CodeMirror-scroll {
+				}
+				#edit { background-color: white }
+				#preview { background-color: white }
+				#edit, #preview {
+					display: flex;
 					overflow: auto;
-					resize: none;
-					flex: 1 0 50%;
-				}
-				.CodeMirror, .CodeMirror-scroll {
-					flex: 1 0 50%;
-					height: 100%;
-				}
-				#preview {
-					overflow: auto;
-					flex: 1 0 50%;
-					height: 100%;
+					flex: 0 0 50%;
 				}
 			</style>
 			<script>
@@ -138,15 +157,20 @@ function editPage(title, contents) {
 			</script>
 		</head>
 		<body>
-			<input type="button" value="Back" onclick="index()">
-			<input type="button" value="Save" onclick="submit()">
-			<input type="text" id="title" style="width: 100%" oninput="textChanged()">
+			<div id="menu">
+				<input type="button" value="Back" onclick="index()">
+` + (core.user.credentials.permissions.authenticated ? `
+				<input type="button" value="Save" onclick="submit()">
+` : "") +
+	`			<a target="_top" href="https://casual-effects.com/markdeep/">Markdeep</a>
+				<input type="text" id="title" oninput="textChanged()">
+			</div>
 			<div id="container">
-				<textarea id="contents" oninput="textChanged()"></textarea>
-				<div style="background-color: #ccc" id="preview"></div>
+				<div id="edit"><textarea id="contents" oninput="textChanged()"></textarea></div>
+				<div id="preview"></div>
 			</div>
 		</body>
-	</html>`, name: "iframe", style: "width: 100%; border: 0; height: 600px"});
+	</html>`, name: "iframe", style: "flex: 1 1 auto; border: 0; width: 100%"});
 }
 
 renderIndex();

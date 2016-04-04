@@ -1,41 +1,180 @@
 "use strict";
 
-// Start at bottom left facing up.
-// Height = 20.  Width = 10.
-// 10 between.
+terminal.setEcho(false);
+terminal.setTitle("Live TurtleScript");
 
-var letters = {
-	A: 'fd(20); rt(90); fd(10); rt(90); fd(10); rt(90); fd(10); pu(); bk(10); lt(90); pd(); fd(10); pu(); lt(90); fd(10); lt(90); pd();',
-	D: 'fd(20); rt(90); fd(10); rt(70); fd(11); rt(40); fd(11); rt(70); fd(10); pu(); bk(20); rt(90); pd();',
-	E: 'pu(); fd(20); rt(90); fd(10); lt(180); pd(); fd(10); lt(90); fd(10); lt(90); fd(8); pu(); rt(180); fd(8); lt(90); pd(); fd(10); lt(90); fd(10); pu(); fd(10); lt(90); pd()',
-	H: 'fd(20); pu(); bk(10); pd(); rt(90); fd(10); lt(90); pu(); fd(10); rt(180); pd(); fd(20); pu(); lt(90); fd(10); lt(90); pd();',
-	L: 'pu(); fd(20); rt(180); pd(); fd(20); lt(90); fd(10); pu(); fd(10); lt(90); pd();',
-	O: 'fd(20); rt(90); fd(10); rt(90); fd(20); rt(90); fd(10); pu(); bk(20); rt(90); pd();',
-	R: 'fd(20); rt(90); fd(10); rt(90); fd(10); rt(90); fd(10); pu(); bk(8); lt(90); pd(); fd(10); pu(); lt(90); fd(12); lt(90); pd();',
-	W: 'pu(); fd(20); rt(180); pd(); fd(20); lt(90); fd(5); lt(90); fd(12); rt(180); pu(); fd(12); pd(); lt(90); fd(5); lt(90); fd(20); pu(); bk(20); rt(90); fd(10); lt(90); pd();',
-	' ': 'pu(); rt(90); fd(20); lt(90); pd();',
-};
-
-function render(text) {
-	terminal.clear();
-	terminal.print(text, " using ", {href: "http://codeheartjs.com/turtle/"}, ".");
-	var contents = '<script src="http://codeheartjs.com/turtle/turtle.min.js">-*- javascript -*-</script><script>\n';
-	contents += 'setScale(2); setWidth(5);\n';
-	for (var i = 0; i < text.length; i++) {
-		var c = text.charAt(i).toUpperCase();
-		if (letters[c]) {
-			contents += letters[c] + '\n';
-		} else {
-			contents += letters[' '] + '\n';
-		}
+core.register("onInput", function(input) {
+	if (input == "new page") {
+		editPage("new", "");
+	} else if (input == "submit") {
+		submitNewPost().then(renderBlog);
+	} else if (input == "home") {
+		renderIndex();
+	} else if (input.substring(0, 5) == "open:") {
+		var title = input.substring(5);
+		database.get(title).then(function(contents) {
+			editPage(title, contents);
+		});
+	} else if (input.substring(0, 7) == "delete:") {
+		terminal.clear();
+		var title = input.substring(7);
+		terminal.print("Are you sure you want to delete page '", title, "'?");
+		terminal.print({command: "confirmDelete:" + title, value: "delete it"});
+		terminal.print({command: "home", value: "cancel"});
+	} else if (input.substring(0, 14) == "confirmDelete:") {
+		var title = input.substring(14);
+		database.remove(title).then(renderIndex);
 	}
-	contents += "ht();\n";
-	contents += "window.addEventListener('message', function(event) { console.debug(event.data); }, false);\n";
-	contents += "</script>\n";
-	terminal.print({iframe: contents, width: 640, height: 480});
-	terminal.print("Type text and the letters ", {style: "color: #ff0", value: Object.keys(letters).join("")}, " in it will be drawn.");
+});
+
+function renderIndex() {
+	terminal.split([{name: "terminal"}]);
+	terminal.clear();
+	terminal.print("Live TurtleScript");
+	if (core.user.credentials.permissions.authenticated) {
+		terminal.print({command: "new page"});
+	}
+
+	database.getAll().then(function(entries) {
+		for (var i = 0; i < entries.length; i++) {
+			if (core.user.credentials.permissions.authenticated) {
+				terminal.print(
+					"* ",
+					{style: "font-weight: bold", value: {command: "open:" + entries[i], value: entries[i]}},
+					" (",
+					{command: "delete:" + entries[i], value: "x"},
+					")");
+			} else {
+				terminal.print(
+					"* ",
+					{style: "font-weight: bold", value: {command: "open:" + entries[i], value: entries[i]}});
+			}
+		}
+	});
 }
 
-render("Hello, world!");
+var gPage = null;
 
-core.register("onInput", render);
+core.register("hashChange", function(event) {
+	var title = event.hash.substring(1);
+	database.get(title).then(function(contents) {
+		editPage(title, contents);
+	});
+});
+
+core.register("onWindowMessage", function(event) {
+	if (event.message.ready) {
+		terminal.postMessageToIframe("iframe", {title: gPage.title, contents: gPage.contents});
+	} else if (event.message.index) {
+		renderIndex();
+	} else {
+		database.set(event.message.title, event.message.contents).then(function() {
+			renderIndex();
+		});
+	}
+});
+
+function editPage(title, contents) {
+	gPage = {title: title, contents: contents};
+	terminal.split([{name: "terminal", type: "vertical"}]);
+	terminal.clear();
+	terminal.print({iframe: `<html>
+		<head>
+			<script src="//cdnjs.cloudflare.com/ajax/libs/codemirror/5.13.2/codemirror.min.js"></script>
+			<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/codemirror/5.13.2/codemirror.min.css"></link>
+			<style>
+				html {
+					height: 100%;
+					margin: 0;
+					padding: 0;
+				}
+				body {
+					display: flex;
+					flex-direction: column;
+					height: 100%;
+					margin: 0;
+					padding: 0;
+				}
+				#menu {
+					flex: 0 0 auto;
+				}
+				#container {
+					flex: 1 1 auto;
+					display: flex;
+					flex-direction: row;
+					width: 100%;
+					background-color: white;
+				}
+				.CodeMirror {
+					width: 100%;
+					height: 100%;
+				}
+				.CodeMirror-scroll {
+				}
+				#edit { background-color: white }
+				#preview { background-color: white }
+				#edit, #preview {
+					display: flex;
+					overflow: auto;
+					flex: 0 0 50%;
+				}
+			</style>
+			<script><!--
+				var gEditor;
+				function index() {
+					parent.postMessage({index: true}, "*");
+				}
+				function submit() {
+					parent.postMessage({
+						title: document.getElementById("title").value,
+						contents: gEditor.getValue(),
+					}, "*");
+				}
+				function textChanged() {
+					var preview = document.getElementById("preview");
+					while (preview.firstChild) {
+						preview.removeChild(preview.firstChild);
+					}
+					var iframe = document.createElement("iframe");
+					iframe.setAttribute('srcdoc', '<script src="https://codeheart.williams.edu/turtle/turtle.min.js?">-*- javascript -*-</script><script>' + gEditor.getValue() + '</script>');
+					iframe.setAttribute('style', 'width: 100vw; height: 100vh; border: 0');
+					preview.appendChild(iframe);
+				}
+			--></script>
+			<script>
+				window.addEventListener("message", function(message) {
+					document.getElementById("title").value = message.data.title;
+					gEditor.setValue(message.data.contents);
+					textChanged();
+				}, false);
+
+				window.addEventListener("load", function() {
+					gEditor = CodeMirror.fromTextArea(document.getElementById("contents"), {
+						lineNumbers: true
+					});
+					gEditor.on("change", textChanged);
+					document.getElementById("preview").addEventListener("error", function(error) {
+						console.debug("onerror: " + error);
+					});
+				});
+				parent.postMessage({ready: true}, "*");
+			</script>
+		</head>
+		<body>
+			<div id="menu">
+				<input type="button" value="Back" onclick="index()">
+` + (core.user.credentials.permissions.authenticated ? `
+				<input type="button" value="Save" onclick="submit()">
+` : "") +
+	`			<a target="_top" href="http://codeheartjs.com/turtle/">TurtleScript</a>
+				<input type="text" id="title" oninput="textChanged()">
+			</div>
+			<div id="container">
+				<div id="edit"><textarea id="contents" oninput="textChanged()"></textarea></div>
+				<div id="preview"></div>
+			</div>
+		</body>
+	</html>`, name: "iframe", style: "flex: 1 1 auto; border: 0; width: 100%"});
+}
+
+renderIndex();

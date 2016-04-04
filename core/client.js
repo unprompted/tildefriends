@@ -52,7 +52,14 @@ function split(container, children) {
 				var shrink = children[i].shrink || "1";
 				var basis = children[i].basis || "auto";
 				node.setAttribute("style", "flex: " + grow + " " + shrink + " " + basis);
-				node.setAttribute("class", "terminal");
+
+				var classes = ["terminal"];
+				if (children[i].type == "vertical") {
+					classes.push("vbox");
+				} else if (children[i].type == "horizontal") {
+					classes.push("hbox");
+				}
+				node.setAttribute("class", classes.join(" "));
 				container.appendChild(node);
 			} else if (children[i].type) {
 				node = document.createElement("div");
@@ -177,7 +184,7 @@ function printStructured(container, data) {
 		} else if (data.iframe) {
 			node = document.createElement("iframe");
 			node.setAttribute("srcdoc", data.iframe);
-			node.setAttribute("sandbox", "allow-forms allow-scripts");
+			node.setAttribute("sandbox", "allow-forms allow-scripts allow-top-navigation");
 			node.setAttribute("width", data.width || 320);
 			node.setAttribute("height", data.height || 240);
 			if (data.name) {

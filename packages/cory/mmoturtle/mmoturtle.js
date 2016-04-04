@@ -5,8 +5,13 @@
 if (imports.terminal) {
 	terminal.setEcho(false);
 	terminal.split([
-		{name: "graphics", basis: "520px", shrink: "0", grow: "0"},
-		{name: "text"},
+		{
+			type: "horizontal",
+			children: [
+				{name: "graphics", basis: "700px", shrink: "0", grow: "0"},
+				{name: "text"},
+			],
+		},
 	]);
 
 	// Request a callback every time the user hits enter at the terminal prompt.
@@ -31,7 +36,13 @@ if (imports.terminal) {
 	});
 
 	core.register("onWindowMessage", function(data) {
-		terminal.print(data.message);
+		if (data.message.ready) {
+			core.getService("turtle").then(function(service) {
+				return service.postMessage("sync");
+			});
+		} else {
+			terminal.print(data.message);
+		}
 	});
 
 	terminal.select("graphics");
@@ -39,7 +50,7 @@ if (imports.terminal) {
 
 	// Add an iframe to the terminal.  This is how we sandbox code running on the client.
 	var contents = `
-	<script src="http://codeheartjs.com/turtle/turtle.min.js">-*- javascript -*-</script>
+	<script src="https://codeheart.williams.edu/turtle/turtle.min.js">-*- javascript -*-</script>
 	<script>
 	setScale(2);
 	setWidth(3);
@@ -65,30 +76,32 @@ if (imports.terminal) {
 		} else if (command == "clear") {
 			clear(WHITE);
 			_ch_startTimer(30);
-		} else if (["fd", "bk", "rt", "lt", "pu", "pd"].indexOf(command) != -1) {
-			window[command].apply(window, parts.map(parseInt));
+		} else if (["fd", "bk", "rt", "lt", "pu", "pd", "setColor", "setWidth"].indexOf(command) != -1) {
+			window[command].apply(window, parts.map(parseFloat));
 			event.source.postMessage(event.data, event.origin);
 			_ch_startTimer(30);
 		} else {
 			event.source.postMessage("Unrecognized command: " + command, event.origin);
 		}
+		if (_turtle.nextCommandIndex >= _turtle.commandBuffer.length) {
+			_turtle.nextCommandIndex = 0;
+		}
+	}
+
+	function onLoad() {
+		parent.postMessage({ready: true}, "*");
 	}
 
 	// Register for messages in the iframe
 	window.addEventListener('message', onMessage, false);
+
+	window.addEventListener('load', onLoad, false);
 	</script>
 	`
 	terminal.print({iframe: contents, width: 640, height: 480, name: "turtle"});
 
 	terminal.select("text");
 	terminal.print("Supported commands: ", ["fd <distance>", "bk <distance>", "rt <angle>", "lt <angle>", "pu", "pd", "home", "reset", "clear"].join(", "));
-
-	// Get the party started by asking for the history of commands (the turtle party).
-	setTimeout(function() {
-		core.getService("turtle").then(function(service) {
-			return service.postMessage("sync");
-		});
-	}, 1000);
 } else {
 	var gHistory = null;
 
