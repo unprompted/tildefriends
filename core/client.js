@@ -29,8 +29,20 @@ function enter(event) {
 function url() {
 	var hash = window.location.href.indexOf('#');
 	var question = window.location.href.indexOf('?');
-	var end = hash != -1 ? hash : question;
+	var end = -1;
+	if (hash != -1 && (hash < end || end == -1))
+	{
+		end = hash;
+	}
+	if (question != -1 && (question < end || end == -1))
+	{
+		end = question;
+	}
 	return end != -1 ? window.location.href.substring(0, end) : window.location.href;
+}
+
+function hash() {
+	return window.location.hash != "#" ? window.location.hash : "";
 }
 
 function storeTarget(target) {
@@ -280,19 +292,19 @@ function updateLogin() {
 			a.setAttribute("onclick", "logoutGoogle()");
 			a.setAttribute("href", "#");
 		} else {
-			a.setAttribute("href", "/login/logout?return=" + encodeURIComponent(url()));
+			a.setAttribute("href", "/login/logout?return=" + encodeURIComponent(url() + hash()));
 		}
 	} else if (window.location.href.indexOf("?guest=1") != -1) {
-		window.location.href = "/login?submit=Proceed+as+Guest&return=" + encodeURIComponent(url());
+		window.location.href = "/login?submit=Proceed+as+Guest&return=" + encodeURIComponent(url() + hash());
 	} else {
-		window.location.href = "/login?return=" + encodeURIComponent(url());
+		window.location.href = "/login?return=" + encodeURIComponent(url() + hash());
 	}
 	login.appendChild(a);
 }
 
 function logoutGoogle() {
 	gapi.auth2.getAuthInstance().signOut().then(function() {
-		window.location.href = "/login/logout?return=" + encodeURIComponent(url());
+		window.location.href = "/login/logout?return=" + encodeURIComponent(url() + hash());
 	});
 }
 
