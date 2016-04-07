@@ -4,11 +4,32 @@ var gHaveIndex = -1;
 var gSessionId;
 var gCredentials;
 var gErrorCount = 0;
+var gCommandHistory = [];
+
+var kMaxCommandHistory = 16;
 
 function enter(event) {
 	if (event.keyCode == 13) {
+		gCommandHistory.push(document.getElementById("input").value);
+		if (gCommandHistory.length > kMaxCommandHistory) {
+			gCommandHistory.shift();
+		}
 		send();
 		event.preventDefault();
+	} else if (event.keyCode == 38) {
+		if (gCommandHistory.length) {
+			var input = document.getElementById("input");
+			gCommandHistory.unshift(input.value);
+			input.value = gCommandHistory.pop();
+			event.preventDefault();
+		}
+	} else if (event.keyCode == 40) {
+		if (gCommandHistory.length) {
+			var input = document.getElementById("input");
+			gCommandHistory.push(input.value);
+			input.value = gCommandHistory.shift();
+			event.preventDefault();
+		}
 	} else if (event.keyCode == 186
 		&& !event.metaKey
 		&& !event.altKey
