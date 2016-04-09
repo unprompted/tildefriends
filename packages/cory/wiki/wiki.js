@@ -124,7 +124,7 @@ function editPage(event) {
 }
 
 // XXX: Why do I need .js?
-require("ui.js").fileList({
+require("ui").fileList({
 	title: "Live Markdeep Editor",
 	edit: editPage,
 });

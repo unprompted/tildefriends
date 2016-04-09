@@ -726,15 +726,20 @@ void Task::configureFromStdin() {
 
 std::string Task::resolveRequire(const std::string& require) {
 	std::string result;
-
 	for (size_t i = 0; i < _path.size(); ++i) {
 		std::string& path = _path[i];
 		std::cout << "Looking in " << path << " for " << require << "\n";
+		std::string test;
 		if (require.find("..") == std::string::npos && require.find('/') == std::string::npos) {
-			result = path + require;
+			test = path + require;
 		}
-		if (result.size() && require.rfind(".js") != require.size() - 3) {
-			result += ".js";
+		if (test.size() && (require.size() < 3 || require.rfind(".js") != require.size() - 3)) {
+			test += ".js";
+		}
+		uv_fs_t request;
+		if (uv_fs_access(_loop, &request, test.c_str(), R_OK, 0) == 0) {
+			result = test;
+			break;
 		}
 	}
 	return result;
