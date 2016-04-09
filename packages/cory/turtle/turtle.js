@@ -1,81 +1,29 @@
 "use strict";
 
+//! {"require": ["ui"]}
+
 terminal.setEcho(false);
 terminal.setTitle("Live TurtleScript");
 
-core.register("onInput", function(input) {
-	if (input == "new page") {
-		editPage("new", "");
-	} else if (input == "submit") {
-		submitNewPost().then(renderBlog);
-	} else if (input == "home") {
-		renderIndex();
-	} else if (input.substring(0, 5) == "open:") {
-		var title = input.substring(5);
-		database.get(title).then(function(contents) {
-			editPage(title, contents);
-		});
-	} else if (input.substring(0, 7) == "delete:") {
-		terminal.clear();
-		var title = input.substring(7);
-		terminal.print("Are you sure you want to delete page '", title, "'?");
-		terminal.print({command: "confirmDelete:" + title, value: "delete it"});
-		terminal.print({command: "home", value: "cancel"});
-	} else if (input.substring(0, 14) == "confirmDelete:") {
-		var title = input.substring(14);
-		database.remove(title).then(renderIndex);
-	}
-});
+let gEditEvent;
 
-function renderIndex() {
+function back() {
 	terminal.split([{name: "terminal"}]);
-	terminal.clear();
-	terminal.print("Live TurtleScript");
-	if (core.user.credentials.permissions.authenticated) {
-		terminal.print({command: "new page"});
-	}
-
-	database.getAll().then(function(entries) {
-		for (var i = 0; i < entries.length; i++) {
-			if (core.user.credentials.permissions.authenticated) {
-				terminal.print(
-					"* ",
-					{style: "font-weight: bold", value: {command: "open:" + entries[i], value: entries[i]}},
-					" (",
-					{command: "delete:" + entries[i], value: "x"},
-					")");
-			} else {
-				terminal.print(
-					"* ",
-					{style: "font-weight: bold", value: {command: "open:" + entries[i], value: entries[i]}});
-			}
-		}
-	});
+	gEditEvent.back();
 }
-
-var gPage = null;
-
-core.register("hashChange", function(event) {
-	var title = event.hash.substring(1);
-	database.get(title).then(function(contents) {
-		editPage(title, contents);
-	});
-});
 
 core.register("onWindowMessage", function(event) {
 	if (event.message.ready) {
-		terminal.postMessageToIframe("iframe", {title: gPage.title, contents: gPage.contents});
+		terminal.postMessageToIframe("iframe", {title: gEditEvent.name, contents: gEditEvent.value});
 	} else if (event.message.index) {
-		renderIndex();
+		back();
 	} else {
-		database.set(event.message.title, event.message.contents).then(function() {
-			renderIndex();
-		});
+		gEditEvent.save(event.message.title, event.message.contents).then(back);
 	}
 });
 
-function editPage(title, contents) {
-	gPage = {title: title, contents: contents};
+function editPage(event) {
+	gEditEvent = event;
 	terminal.split([{name: "terminal", type: "vertical"}]);
 	terminal.clear();
 	terminal.print({iframe: `<html>
@@ -177,4 +125,7 @@ function editPage(title, contents) {
 	</html>`, name: "iframe", style: "flex: 1 1 auto; border: 0; width: 100%"});
 }
 
-renderIndex();
+require("ui").fileList({
+	title: "Live TurtleScript",
+	edit: editPage,
+});
