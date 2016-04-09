@@ -110,7 +110,11 @@ function getPackages() {
 			var packageNames = File.readDirectory("packages/" + packageOwners[i] + "/");
 			for (var j = 0; j < packageNames.length; j++) {
 				if (packageNames[j].charAt(0) != ".") {
-					packages.push({owner: packageOwners[i], name: packageNames[j]});
+					packages.push({
+						owner: packageOwners[i],
+						name: packageNames[j],
+						manifest: getManifest("packages/" + packageOwners[i] + "/" + packageNames[j] + "/" + packageNames[j] + ".js"),
+					});
 				}
 			}
 		}
