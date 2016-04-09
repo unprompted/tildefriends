@@ -91,6 +91,7 @@ void TaskStub::create(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	taskTemplate->Set(v8::String::NewFromUtf8(args.GetIsolate(), "execute"), v8::FunctionTemplate::New(args.GetIsolate(), TaskStub::execute, data));
 	taskTemplate->Set(v8::String::NewFromUtf8(args.GetIsolate(), "kill"), v8::FunctionTemplate::New(args.GetIsolate(), TaskStub::kill, data));
 	taskTemplate->Set(v8::String::NewFromUtf8(args.GetIsolate(), "statistics"), v8::FunctionTemplate::New(args.GetIsolate(), TaskStub::statistics, data));
+	taskTemplate->Set(v8::String::NewFromUtf8(args.GetIsolate(), "addPath"), v8::FunctionTemplate::New(args.GetIsolate(), addPath, data));
 	taskTemplate->SetInternalFieldCount(1);
 
 	v8::Handle<v8::Object> taskObject = taskTemplate->NewInstance();
@@ -192,6 +193,14 @@ void TaskStub::setImports(const v8::FunctionCallbackInfo<v8::Value>& args) {
 		std::vector<char> buffer;
 		Serialize::store(Task::get(args.GetIsolate()), buffer, args[0]);
 		stub->_stream.send(kSetImports, &*buffer.begin(), buffer.size());
+	}
+}
+
+void TaskStub::addPath(const v8::FunctionCallbackInfo<v8::Value>& args) {
+	if (TaskStub* stub = TaskStub::get(args.Data())) {
+		std::vector<char> buffer;
+		Serialize::store(Task::get(args.GetIsolate()), buffer, args[0]);
+		stub->_stream.send(kAddPath, &*buffer.begin(), buffer.size());
 	}
 }
 

@@ -47,6 +47,8 @@ private:
 	static void getExports(const v8::FunctionCallbackInfo<v8::Value>& args);
 	static void setImports(const v8::FunctionCallbackInfo<v8::Value>& args);
 
+	static void addPath(const v8::FunctionCallbackInfo<v8::Value>& args);
+
 	static void getOnExit(v8::Local<v8::String> property, const v8::PropertyCallbackInfo<v8::Value>& args);
 	static void setOnExit(v8::Local<v8::String> property, v8::Local<v8::Value> value, const v8::PropertyCallbackInfo<void>& args);
 

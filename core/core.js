@@ -215,6 +215,11 @@ function getManifest(fileName) {
 	return manifest.length ? JSON.parse(manifest.join("\n")) : null;
 }
 
+function packageNameToPath(name) {
+	var process = this;
+	return "packages/" + process.packageOwner + "/" + name + "/";
+}
+
 function getProcess(packageOwner, packageName, key, options) {
 	var process = gProcesses[key];
 	if (!process
@@ -341,6 +346,11 @@ function getProcess(packageOwner, packageName, key, options) {
 				} else {
 					throw new Error(packageOwner + " does not have right to permission 'network'.");
 				}
+			}
+			if (manifest && manifest.require) {
+				print("manifest.require = ", manifest.require);
+				print(manifest.require.map(packageNameToPath.bind(process)));
+				process.task.addPath(manifest.require.map(packageNameToPath.bind(process)));
 			}
 			process.task.setImports(imports);
 			print("Activating task");

@@ -31,6 +31,7 @@ enum MessageType {
 	kReleaseExport,
 	kReleaseImport,
 	kSetTrusted,
+	kAddPath,
 	kActivate,
 	kExecute,
 	kKill,
@@ -95,6 +96,7 @@ private:
 	taskid_t _nextTask = 1;
 	static const taskid_t kParentId = 0;
 	std::map<taskid_t, TaskStub*> _children;
+	std::vector<std::string> _path;
 
 	typedef std::map<std::string, v8::Persistent<v8::Object, v8::CopyablePersistentTraits<v8::Object> > > ScriptExportMap;
 	ScriptExportMap _scriptExports;

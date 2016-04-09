@@ -182,6 +182,11 @@ void Task::activate() {
 
 	v8::Local<v8::Context> context = v8::Context::New(_isolate, 0, global);
 	_context = v8::Persistent<v8::Context, v8::CopyablePersistentTraits<v8::Context> >(_isolate, context);
+
+	v8::Context::Scope contextScope(v8::Local<v8::Context>::New(_isolate, _context));
+
+	v8::Local<v8::Object> exportObject = v8::Object::New(_isolate);
+	_exportObject = v8::Persistent<v8::Object, v8::CopyablePersistentTraits<v8::Object> >(_isolate, exportObject);
 }
 
 void Task::activate(const v8::FunctionCallbackInfo<v8::Value>& args) {
@@ -269,6 +274,16 @@ bool Task::execute(const char* fileName) {
 	std::cout << "Running script " << fileName << "\n";
 	if (!_scriptName.size()) {
 		_scriptName = fileName;
+	}
+	if (!_path.size()) {
+		std::string path = _scriptName;
+		size_t position = path.rfind('/');
+		if (position != std::string::npos) {
+			path.resize(position + 1);
+		} else {
+			path = ".";
+		}
+		_path.push_back(path);
 	}
 	if (!source.IsEmpty()) {
 		v8::Handle<v8::Script> script = v8::Script::Compile(source, name);
@@ -645,6 +660,23 @@ void Task::onReceivePacket(int packetType, const char* begin, size_t length, voi
 			to->_trusted = trusted;
 		}
 		break;
+	case kAddPath:
+		{
+			v8::Handle<v8::Array> result = v8::Handle<v8::Array>::Cast(Serialize::load(to, from, std::vector<char>(begin, begin + length)));
+			if (!result.IsEmpty()) {
+				for (size_t i = 0; i < result->Length(); ++i) {
+					v8::Handle<v8::Value> handle = result->Get(i);
+					if (!handle.IsEmpty()) {
+						v8::Handle<v8::String> entry = handle.As<v8::String>();
+						if (!entry.IsEmpty()) {
+							v8::String::Utf8Value value(entry);
+							to->_path.push_back(*value);
+						}
+					}
+				}
+			}
+		}
+		break;
 	case kActivate:
 		to->activate();
 		break;
@@ -692,10 +724,9 @@ void Task::configureFromStdin() {
 
 std::string Task::resolveRequire(const std::string& require) {
 	std::string result;
-	std::string path = _scriptName;
-	size_t position = path.rfind('/');
-	if (position != std::string::npos) {
-		path.resize(position + 1);
+
+	for (size_t i = 0; i < _path.size(); ++i) {
+		std::string& path = _path[i];
 		std::cout << "Looking in " << path << " for " << require << "\n";
 		if (require.find("..") == std::string::npos && require.find('/') == std::string::npos) {
 			result = path + require;
