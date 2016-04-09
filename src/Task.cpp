@@ -104,6 +104,8 @@ Task::Task() {
 }
 
 Task::~Task() {
+	_exportObject.Reset();
+
 	{
 		v8::Isolate::Scope isolateScope(_isolate);
 		v8::HandleScope handleScope(_isolate);
