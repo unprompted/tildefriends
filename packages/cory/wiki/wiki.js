@@ -123,7 +123,6 @@ function editPage(event) {
 	</html>`, name: "iframe", style: "flex: 1 1 auto; border: 0; width: 100%"});
 }
 
-// XXX: Why do I need .js?
 require("ui").fileList({
 	title: "Live Markdeep Editor",
 	edit: editPage,

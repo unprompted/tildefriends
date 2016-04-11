@@ -361,7 +361,9 @@ function handleConnection(client) {
 					lineByLine = false;
 					body = "";
 					return true;
-				} else if (headers["connection"].toLowerCase().split(",").map(x => x.trim()).indexOf("upgrade") != -1
+				} else if (headers["connection"]
+					&& headers["connection"].toLowerCase().split(",").map(x => x.trim()).indexOf("upgrade") != -1
+					&& headers["upgrade"]
 					&& headers["upgrade"].toLowerCase() == "websocket") {
 					var requestObject = new Request(request[0], request[1], request[2], headers, body, client);
 					var response = new Response(requestObject, client);

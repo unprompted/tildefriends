@@ -1,7 +1,7 @@
 var gBackup;
 var gEditor;
 
-$(document).ready(function() {
+window.addEventListener("load", function() {
 	gEditor = CodeMirror.fromTextArea(document.getElementById("editor"), {
 		'theme': 'base16-dark',
 		'lineNumbers': true,
@@ -40,22 +40,39 @@ function save(newName) {
 	var contents = gEditor.getValue();
 	var run = document.getElementById("run").checked;
 
-	return $.ajax({
-		type: "POST",
-		url: newName ? "../" + newName + "/save" : "save",
-		data: contents,
-		dataType: "text",
-	}).done(function(uri) {
-		gBackup = contents;
-		if (run) {
-			back(uri);
-		}
-	}).fail(function(xhr, status, error) {
-		alert("Unable to save: " + xhr.responseText);
-	}).always(function() {
+	var request = new XMLHttpRequest();
+
+	var always = function() {
 		document.getElementById("save").disabled = false;
 		document.getElementById("saveAs").disabled = false;
+	};
+
+	request.addEventListener("error", function() {
+		alert("Error saving: " + request.responseText);
+		always();
 	});
+	request.addEventListener("loadend", function() {
+		if (request.status == 200) {
+			gBackup = contents;
+			if (run) {
+				back(request.responseText);
+			}
+		} else {
+			alert("Unable to save: " + request.responseText);
+		}
+		always();
+	});
+	request.addEventListener("timeout", function() {
+		alert("Timed out saving: " + request.responseText);
+		always();
+	});
+	request.addEventListener("abort", function() {
+		alert("Save aborted: " + request.responseText);
+		always();
+	});
+	request.open("POST", newName ? "../" + newName + "/save" : "save", true);
+	request.setRequestHeader("Content-Type", "text/plain");
+	request.send(contents);
 }
 
 function saveAs() {

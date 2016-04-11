@@ -34,13 +34,14 @@ function enter(event) {
 		&& !event.altKey
 		&& !event.ctrlKey
 		&& !event.shiftKey) {
-		var value = $("#input").val();
+		var input = document.getElementById("input");
+		var value = input.value;
 		if (value && value[value.length - 1] == '\\') {
-			$("#input").val(value.substring(0, value.length - 1) + ";");
+			input.value = value.substring(0, value.length - 1) + ";";
 			event.preventDefault();
 		} else {
 			storeTarget(value);
-			$("#input").val("");
+			input.value = "";
 			event.preventDefault();
 		}
 	}
@@ -66,7 +67,7 @@ function hash() {
 }
 
 function storeTarget(target) {
-	$("#target").text(target || "");
+	document.getElementById("target").innerText = target || "";
 }
 
 function split(container, children) {
@@ -238,7 +239,7 @@ function printStructured(container, data) {
 
 function commandClick() {
 	send(this.dataset.command);
-	$("#input").focus();
+	document.getElementById("input").focus();
 }
 
 function autoScroll(terminal) {
@@ -257,10 +258,10 @@ function setErrorMessage(message) {
 function send(command) {
 	var value = command;
 	if (!command) {
-		var target = $("#target").text();
+		var target = document.getElementById("target").innerText;
 		var prefix = target ? target + " " : "";
-		value = prefix + $("#input").val();
-		$("#input").val("");
+		value = prefix + document.getElementById("input").value;
+		document.getElementById("input").value = "";
 	}
 	try {
 		gSocket.send(JSON.stringify({action: "command", command: value}));
@@ -305,15 +306,16 @@ var gOriginalInput;
 function dragHover(event) {
 	event.stopPropagation();
 	event.preventDefault();
+	var input = document.getElementById("input");
 	if (event.type == "dragover") {
-		if (!$("#input").hasClass("drop")) {
-			$("#input").addClass("drop");
-			gOriginalInput = $("#input").val();
-			$("#input").val("drop file to upload");
+		if (!input.classList.contains("drop")) {
+			input.classList.add("drop");
+			gOriginalInput = input.value;
+			input.value = "drop file to upload";
 		}
 	} else {
-		$("#input").removeClass("drop");
-		$("#input").val(gOriginalInput);
+		input.classList.remove("drop");
+		input.value = gOriginalInput;
 	}
 }
 
@@ -411,12 +413,13 @@ function onMessage(event) {
 
 var gSocket;
 
-$(document).ready(function() {
+window.addEventListener("load", function() {
 	if (Notification) {
 		Notification.requestPermission();
 	}
-	$("#input").keydown(enter);
-	$("#input").focus();
+	var input = document.getElementById("input");
+	input.addEventListener("keydown", enter);
+	input.focus();
 	window.addEventListener("hashchange", hashChange);
 	window.addEventListener("focus", focus);
 	window.addEventListener("blur", blur);

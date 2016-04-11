@@ -7,6 +7,8 @@ let kDocumentation = {
 	"core.getUser": ["", "Gets information about the current user."],
 	"core.getUsers": ["packageOwner, packageName", "Get a list of all online users, restricted to a package if specified."],
 	"core.register": ["eventName, handlerFunction", "Register a callback function for the given event."],
+	"core.unregister": ["eventName, handlerFunction", "Unregister a callback function for the given event."],
+	"core.user.postMessage": ["message", "Send a message to the process for the given user session."],
 	"database.get": ["key", "Retrieve the database value associated with the given key."],
 	"database.set": ["key, value", "Sets the database value for the given key, overwriting any existing value."],
 	"database.getAll": ["", "Retrieve a list of all key names."],
@@ -25,6 +27,10 @@ let kDocumentation = {
 	"terminal.setHash": ["hash", "Sets the URL #hash, typically so that the user can copy / bookmark it and return to a similar state."],
 	"terminal.postMessageToIframe": ["name, message", "Sends the message to the iframe that was created with the given name using window.postMessage."],
 	"terminal.notify": ["body, {title, icon}", ["Produces an ", {href: "https://developer.mozilla.org/en-US/docs/Web/API/notification", value: "HTML5 Notification"}, ".  Arguments are the same as the Notification constructor."]],
+	"terminal.cork": ["", "Stop sending updates to the terminal until uncork() is called.  Can be used to prevent flickering when clearing and redrawing."],
+	"terminal.uncork": ["", "Resume sending updates to the terminal."],
+	"terminal.split": ["terminalList", "Reconfigures the terminal layout (often into multiple split panes)."],
+	"terminal.select": ["name", "Directs subsequent output to the named terminal."],
 };
 
 terminal.print("V8 Version ", version);
