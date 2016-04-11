@@ -1,6 +1,5 @@
 "use strict";
 
-var gHaveIndex = -1;
 var gSessionId;
 var gCredentials;
 var gErrorCount = 0;
@@ -122,8 +121,8 @@ function receive(data) {
 		if (line && line.action == "ping") {
 			gSocket.send(JSON.stringify({action: "pong"}));
 		} else if (line && line.action == "session") {
-			gSessionId = line.session.sessionId;
-			gCredentials = line.session.credentials;
+			gSessionId = line.sessionId;
+			gCredentials = line.credentials;
 			updateLogin();
 		} else if (line && line[0] && line[0].action == "ready") {
 			if (window.location.hash) {
@@ -156,9 +155,6 @@ function receive(data) {
 		} else {
 			print(document.getElementById(target), line);
 		}
-	}
-	if ("index" in data) {
-		gHaveIndex = data.index;
 	}
 }
 
@@ -249,6 +245,15 @@ function autoScroll(terminal) {
 	terminal.scrollTop = terminal.scrollHeight - terminal.clientHeight;
 }
 
+function setErrorMessage(message) {
+	var node = document.getElementById("status");
+	while (node.firstChild) {
+		node.removeChild(node.firstChild);
+	}
+	node.appendChild(document.createTextNode(message));
+	node.setAttribute("style", "display: inline; color: #dc322f");
+}
+
 function send(command) {
 	var value = command;
 	if (!command) {
@@ -260,12 +265,7 @@ function send(command) {
 	try {
 		gSocket.send(JSON.stringify({action: "command", command: value}));
 	} catch (error) {
-		var node = document.getElementById("status");
-		while (node.firstChild) {
-			node.removeChild(node.firstChild);
-		}
-		node.appendChild(document.createTextNode("Send failed: " + error));
-		node.setAttribute("style", "display: inline; color: #dc322f");
+		setErrorMessage("Send failed: " + error.toString());
 	}
 }
 
@@ -436,5 +436,8 @@ $(document).ready(function() {
 	}
 	gSocket.onmessage = function(event) {
 		receive(JSON.parse(event.data));
+	}
+	gSocket.onclose = function(event) {
+		setErrorMessage("Connection closed with code " + event.code);
 	}
 });

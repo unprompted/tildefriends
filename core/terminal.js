@@ -174,9 +174,10 @@ function socket(request, response, client) {
 					packageOwner = match[1];
 					packageName = match[2];
 				}
-				response.send(JSON.stringify({action: "hello"}), 0x1);
+				var sessionId = makeSessionId();
+				response.send(JSON.stringify({lines: [{action: "session", sessionId: sessionId, credentials: credentials}]}), 0x1);
 
-				process = getSessionProcess(packageOwner, packageName, makeSessionId(), options);
+				process = getSessionProcess(packageOwner, packageName, sessionId, options);
 				process.terminal.readOutput(function(message) {
 					response.send(JSON.stringify(message), 0x1);
 				});
