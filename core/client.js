@@ -108,83 +108,58 @@ function split(container, children) {
 	}
 }
 
-function receive() {
-	$.ajax({
-		url: url() + "/receive?sessionId=" + gSessionId,
-			method: "POST",
-			data: gHaveIndex.toString(),
-			dataType: "json",
-	}).then(function(data) {
-		for (var i in data.lines) {
-			var line = data.lines[i];
+function receive(data) {
+	for (var i in data.lines) {
+		var line = data.lines[i];
 
-			var target = document.getElementsByClassName("terminal")[0].id;
-			if (line && line.terminal) {
-				if (document.getElementById("terminal_" + line.terminal)) {
-					target = "terminal_" + line.terminal;
-				}
-				line = line.value;
+		var target = document.getElementsByClassName("terminal")[0].id;
+		if (line && line.terminal) {
+			if (document.getElementById("terminal_" + line.terminal)) {
+				target = "terminal_" + line.terminal;
 			}
-			if (line && line.action == "ping") {
-				// PONG
-			} else if (line && line.action == "session") {
-				gSessionId = line.session.sessionId;
-				gCredentials = line.session.credentials;
-				updateLogin();
-			} else if (line && line[0] && line[0].action == "ready") {
-				if (window.location.hash) {
-					send({event: "hashChange", hash: window.location.hash});
-				}
-			} else if (line && line[0] && line[0].action == "notify") {
-				new Notification(line[0].title, line[0].options);
-			} else if (line && line[0] && line[0].action == "title") {
-				window.document.title = line[0].value;
-			} else if (line && line[0] && line[0].action == "prompt") {
-				var prompt = document.getElementById("prompt");
-				while (prompt.firstChild) {
-					prompt.removeChild(prompt.firstChild);
-				}
-				prompt.appendChild(document.createTextNode(line[0].value));
-			} else if (line && line[0] && line[0].action == "password") {
-				var prompt = document.getElementById("input");
-				prompt.setAttribute("type", line[0].value ? "password" : "text");
-			} else if (line && line[0] && line[0].action == "hash") {
-				window.location.hash = line[0].value;
-			} else if (line && line[0] && line[0].action == "update") {
-				document.getElementById("update").setAttribute("Style", "display: inline");
-			} else if (line && line[0] && line[0].action == "split") {
-				split(document.getElementById("terminals"), line[0].options);
-			} else if (line && line[0] && line[0].action == "postMessageToIframe") {
-				var iframe = document.getElementById("iframe_" + line[0].name);
-				if (iframe) {
-					iframe.contentWindow.postMessage(line[0].message, "*");
-				}
-			} else {
-				print(document.getElementById(target), line);
+			line = line.value;
+		}
+		if (line && line.action == "ping") {
+			gSocket.send(JSON.stringify({action: "pong"}));
+		} else if (line && line.action == "session") {
+			gSessionId = line.session.sessionId;
+			gCredentials = line.session.credentials;
+			updateLogin();
+		} else if (line && line[0] && line[0].action == "ready") {
+			if (window.location.hash) {
+				send({event: "hashChange", hash: window.location.hash});
 			}
-		}
-		if ("index" in data) {
-			gHaveIndex = data.index;
-		}
-		receive();
-		if (gErrorCount) {
-			document.getElementById("status").setAttribute("style", "display: none");
-		}
-		gErrorCount = 0;
-	}).fail(function(xhr, message, error) {
-		var node = document.getElementById("status");
-		while (node.firstChild) {
-			node.removeChild(node.firstChild);
-		}
-		node.appendChild(document.createTextNode("ERROR: " + JSON.stringify([message, error])));
-		node.setAttribute("style", "display: inline; color: #dc322f");
-		if (gErrorCount < 60) {
-			setTimeout(receive, 1000);
+		} else if (line && line[0] && line[0].action == "notify") {
+			new Notification(line[0].title, line[0].options);
+		} else if (line && line[0] && line[0].action == "title") {
+			window.document.title = line[0].value;
+		} else if (line && line[0] && line[0].action == "prompt") {
+			var prompt = document.getElementById("prompt");
+			while (prompt.firstChild) {
+				prompt.removeChild(prompt.firstChild);
+			}
+			prompt.appendChild(document.createTextNode(line[0].value));
+		} else if (line && line[0] && line[0].action == "password") {
+			var prompt = document.getElementById("input");
+			prompt.setAttribute("type", line[0].value ? "password" : "text");
+		} else if (line && line[0] && line[0].action == "hash") {
+			window.location.hash = line[0].value;
+		} else if (line && line[0] && line[0].action == "update") {
+			document.getElementById("update").setAttribute("Style", "display: inline");
+		} else if (line && line[0] && line[0].action == "split") {
+			split(document.getElementById("terminals"), line[0].options);
+		} else if (line && line[0] && line[0].action == "postMessageToIframe") {
+			var iframe = document.getElementById("iframe_" + line[0].name);
+			if (iframe) {
+				iframe.contentWindow.postMessage(line[0].message, "*");
+			}
 		} else {
-			setTimeout(receive, 60 * 1000);
+			print(document.getElementById(target), line);
 		}
-		gErrorCount++;
-	});
+	}
+	if ("index" in data) {
+		gHaveIndex = data.index;
+	}
 }
 
 function autoNewLine(terminal) {
@@ -282,19 +257,16 @@ function send(command) {
 		value = prefix + $("#input").val();
 		$("#input").val("");
 	}
-	$.ajax({
-		url: url() + "/send?sessionId=" + gSessionId,
-			method: "POST",
-			data: JSON.stringify(value),
-			dataType: "text",
-	}).fail(function(xhr, status, error) {
+	try {
+		gSocket.send(JSON.stringify({action: "command", command: value}));
+	} catch (error) {
 		var node = document.getElementById("status");
 		while (node.firstChild) {
 			node.removeChild(node.firstChild);
 		}
-		node.appendChild(document.createTextNode("Send failed: " + JSON.stringify([status, error])));
+		node.appendChild(document.createTextNode("Send failed: " + error));
 		node.setAttribute("style", "display: inline; color: #dc322f");
-	});
+	}
 }
 
 function updateLogin() {
@@ -437,6 +409,8 @@ function onMessage(event) {
 	send({event: "onWindowMessage", message: event.data});
 }
 
+var gSocket;
+
 $(document).ready(function() {
 	if (Notification) {
 		Notification.requestPermission();
@@ -448,10 +422,18 @@ $(document).ready(function() {
 	window.addEventListener("blur", blur);
 	window.addEventListener("message", onMessage, false);
 	enableDragDrop();
-});
 
-$(window).load(function() {
-	setTimeout(function() {
-		receive();
-	}, 0);
+	gSocket = new WebSocket("ws://"
+		+ window.location.hostname
+		+ (window.location.port.length ? ":" + window.location.port : "")
+		+ "/terminal/socket");
+	gSocket.onopen = function() {
+		gSocket.send(JSON.stringify({
+			action: "hello",
+			path: window.location.pathname,
+		}));
+	}
+	gSocket.onmessage = function(event) {
+		receive(JSON.parse(event.data));
+	}
 });

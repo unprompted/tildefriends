@@ -1,4 +1,7 @@
+"use strict";
+
 var gHandlers = [];
+var gSocketHandlers = [];
 
 function logError(error) {
 	print("ERROR " + error);
@@ -21,6 +24,14 @@ function addHandler(handler) {
 
 function all(prefix, handler) {
 	addHandler({
+		owner: this,
+		path: prefix,
+		invoke: handler,
+	});
+}
+
+function registerSocketHandler(prefix, handler) {
+	gSocketHandlers.push({
 		owner: this,
 		path: prefix,
 		invoke: handler,
@@ -56,8 +67,21 @@ function findHandler(request) {
 	return matchedHandler;
 }
 
+function findSocketHandler(request) {
+	var matchedHandler = null;
+	for (var name in gSocketHandlers) {
+		var handler = gSocketHandlers[name];
+		if (request.uri == handler.path || request.uri.slice(0, handler.path.length + 1) == handler.path + '/') {
+			matchedHandler = handler;
+			break;
+		}
+	}
+	return matchedHandler;
+}
+
 function Response(request, client) {
 	var kStatusText = {
+		101: "Switching Protocols",
 		200: 'OK',
 		303: 'See other',
 		403: 'Forbidden',
@@ -160,6 +184,136 @@ function handleRequest(request, response) {
 	}
 }
 
+function handleWebSocketRequest(request, response, client) {
+	var buffer = "";
+	var frame = "";
+	var frameOpCode = 0x0;
+
+	var handler = findSocketHandler(request);
+	if (!handler) {
+		client.close();
+		return;
+	}
+
+	response.send = function(message, opCode) {
+		if (opCode === undefined) {
+			opCode = 0x2;
+		}
+		var fin = true;
+		var packet = String.fromCharCode((fin ? (1 << 7) : 0) | (opCode & 0xf));
+		var mask = false;
+		if (message.length < 126) {
+			packet += String.fromCharCode((mask ? (1 << 7) : 0) | message.length);
+		} else if (message.length < (1 << 16)) {
+			packet += String.fromCharCode((mask ? (1 << 7) : 0) | 126);
+			packet += String.fromCharCode((message.length >> 8) & 0xff);
+			packet += String.fromCharCode(message.length & 0xff);
+		} else {
+			packet += String.fromCharCode((mask ? (1 << 7) : 0) | 127);
+			packet += String.fromCharCode((message.length >> 24) & 0xff);
+			packet += String.fromCharCode((message.length >> 16) & 0xff);
+			packet += String.fromCharCode((message.length >> 8) & 0xff);
+			packet += String.fromCharCode(message.length & 0xff);
+		}
+		packet += message;
+		return client.write(packet);
+	}
+	response.onMessage = null;
+
+	handler.invoke(request, response);
+
+	client.read(function(data) {
+		if (data) {
+			buffer += data;
+			if (buffer.length >= 2) {
+				var bits0 = buffer.charCodeAt(0);
+				var bits1 = buffer.charCodeAt(1);
+				if (bits1 & (1 << 7) == 0) {
+					// Unmasked message.
+					client.close();
+				}
+				var opCode = bits0 & 0xf;
+				var fin = bits0 & (1 << 7);
+				var payloadLength = bits1 & 0x7f;
+				var maskStart = 2;
+
+				if (payloadLength == 126) {
+					payloadLength = 0;
+					for (var i = 0; i < 2; i++) {
+						payloadLength <<= 8;
+						payloadLength |= buffer.charCodeAt(2 + i);
+					}
+					maskStart = 4;
+				} else if (payloadLength == 127) {
+					payloadLength = 0;
+					for (var i = 0; i < 8; i++) {
+						payloadLength <<= 8;
+						payloadLength |= buffer.charCodeAt(2 + i);
+					}
+					maskStart = 10;
+				}
+				var havePayload = buffer.length >= payloadLength + 2 + 4;
+				if (havePayload) {
+					var mask = buffer.substring(maskStart, maskStart + 4);
+					var dataStart = maskStart + 4;
+					var decoded = "";
+					var payload = buffer.substring(dataStart, dataStart + payloadLength);
+					buffer = buffer.substring(dataStart + payloadLength);
+					for (var i = 0; i < payloadLength; i++) {
+						decoded += String.fromCharCode(payload.charCodeAt(i) ^ mask.charCodeAt(i % 4));
+					}
+
+					frame += decoded;
+					if (opCode) {
+						frameOpCode = opCode;
+					}
+
+					if (fin) {
+						if (response.onMessage) {
+							response.onMessage({
+								data: frame,
+								opCode: frameOpCode,
+							});
+						}
+						frame = "";
+					}
+				}
+			}
+		}
+	});
+	client.onError(function(error) {
+		logError(client.peerName + " - - [" + new Date() + "] " + error);
+	});
+
+	response.writeHead(101, {
+		"Upgrade": "websocket",
+		"Connection": "Upgrade",
+		"Sec-WebSocket-Accept": webSocketAcceptResponse(request.headers["sec-websocket-key"]),
+	});
+}
+
+function webSocketAcceptResponse(key) {
+	var kMagic = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+	var kAlphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
+	var hex = require("sha1").hash(key + kMagic)
+	var binary = "";
+	for (var i = 0; i < hex.length; i += 6) {
+		var characters = hex.substring(i, i + 6);
+		if (characters.length < 6) {
+			characters += "0".repeat(6 - characters.length);
+		}
+		var value = parseInt(characters, 16);
+		for (var bit = 0; bit < 8 * 3; bit += 6) {
+			if (i * 8 / 2 + bit >= 8 * hex.length / 2) {
+				binary += kAlphabet.charAt(64);
+			} else {
+				binary += kAlphabet.charAt((value >> (18 - bit)) & 63);
+			}
+		}
+	}
+	return binary;
+}
+
 function handleConnection(client) {
 	var inputBuffer = "";
 	var request;
@@ -207,6 +361,12 @@ function handleConnection(client) {
 					lineByLine = false;
 					body = "";
 					return true;
+				} else if (headers["connection"].toLowerCase().split(",").map(x => x.trim()).indexOf("upgrade") != -1
+					&& headers["upgrade"].toLowerCase() == "websocket") {
+					var requestObject = new Request(request[0], request[1], request[2], headers, body, client);
+					var response = new Response(requestObject, client);
+					handleWebSocketRequest(requestObject, response, client);
+					return false;
 				} else {
 					finish();
 					return false;
@@ -291,3 +451,4 @@ if (privateKey && certificate) {
 }
 
 exports.all = all;
+exports.registerSocketHandler = registerSocketHandler;

@@ -146,27 +146,6 @@ function getUsers(packageOwner, packageName) {
 	return result;
 }
 
-function ping() {
-	var process = this;
-	var now = Date.now();
-	var again = true;
-	if (now - process.lastActive < process.timeout) {
-		// Active.
-	} else if (process.lastPing > process.lastActive) {
-		// We lost them.
-		process.task.kill();
-		again = false;
-	} else {
-		// Idle.  Ping them.
-		process.terminal.ping();
-		process.lastPing = now;
-	}
-
-	if (again) {
-		setTimeout(ping.bind(process), process.timeout);
-	}
-}
-
 function postMessageInternal(from, to, message) {
 	return invoke(to.eventHandlers['onMessage'], [getUser(from, from), message]);
 }
@@ -273,9 +252,6 @@ function getProcess(packageOwner, packageName, key, options) {
 				process.connections.length = 0;
 				delete gProcesses[key];
 			};
-			if (process.timeout > 0) {
-				setTimeout(ping.bind(process), process.timeout);
-			}
 			var imports = {
 				'core': {
 					'broadcast': broadcast.bind(process),
@@ -352,8 +328,6 @@ function getProcess(packageOwner, packageName, key, options) {
 				}
 			}
 			if (manifest && manifest.require) {
-				print("manifest.require = ", manifest.require);
-				print(manifest.require.map(packageNameToPath.bind(process)));
 				process.task.addPath(manifest.require.map(packageNameToPath.bind(process)));
 			}
 			process.task.setImports(imports);
@@ -439,3 +413,4 @@ httpd.all("", function(request, response) {
 		return response.end(data);
 	}
 });
+httpd.registerSocketHandler("/terminal/socket", terminal.socket);
