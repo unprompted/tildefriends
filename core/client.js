@@ -423,7 +423,8 @@ $(document).ready(function() {
 	window.addEventListener("message", onMessage, false);
 	enableDragDrop();
 
-	gSocket = new WebSocket("ws://"
+	gSocket = new WebSocket(
+		(window.location.protocol == "https:" ? "wss://" : "ws://")
 		+ window.location.hostname
 		+ (window.location.port.length ? ":" + window.location.port : "")
 		+ "/terminal/socket");
