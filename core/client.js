@@ -288,10 +288,9 @@ function updateLogin() {
 		} else {
 			a.setAttribute("href", "/login/logout?return=" + encodeURIComponent(url() + hash()));
 		}
-	} else if (window.location.href.indexOf("?guest=1") != -1) {
-		window.location.href = "/login?submit=Proceed+as+Guest&return=" + encodeURIComponent(url() + hash());
 	} else {
-		window.location.href = "/login?return=" + encodeURIComponent(url() + hash());
+		a.appendChild(document.createTextNode("login"));
+		a.setAttribute("href", "/login?return=" + encodeURIComponent(url() + hash()));
 	}
 	login.appendChild(a);
 }

@@ -332,9 +332,9 @@ function handleConnection(client) {
 	}
 
 	function finish() {
+		var requestObject = new Request(request[0], request[1], request[2], headers, body, client);
+		var response = new Response(requestObject, client);
 		try {
-			var requestObject = new Request(request[0], request[1], request[2], headers, body, client);
-			var response = new Response(requestObject, client);
 			handleRequest(requestObject, response)
 			if (client.isConnected) {
 				reset();
