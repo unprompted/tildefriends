@@ -22,7 +22,7 @@ kUvBranch = 'v1.0.0'
 kUvWork = 'uv'
 
 kV8Repository = 'https://github.com/v8/v8.git'
-kV8Branch = 'branch-heads/4.9'
+kV8Branch = 'branch-heads/5.0'
 kV8Work = 'v8'
 
 def run(*args, **kw):
@@ -107,11 +107,6 @@ def updateV8():
 		run(['gclient' + extension, 'sync'], cwd=kV8Work, env=win32Env)
 	else:
 		run(['gclient' + extension, 'sync'], cwd=kV8Work)
-
-	if sys.platform == 'linux2':
-		contents = open(os.path.join(kV8Work, 'tools/swarming_client/third_party/requests/packages/urllib3/contrib/pyopenssl.py'), 'r').readlines()
-		contents = [line for line in contents if not 'SSLv3' in line]
-		open(os.path.join(kV8Work, 'tools/swarming_client/third_party/requests/packages/urllib3/contrib/pyopenssl.py'), 'w').write(''.join(contents))
 
 	if sys.platform == 'linux2':
 		run(['make', '-j4', 'native'], cwd=kV8Work)
