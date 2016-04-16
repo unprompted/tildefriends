@@ -3,7 +3,7 @@
 cat > test.js << EOF
 var task = new Task();
 task.activate();
-task.execute("child.js").then(function() {
+task.execute({name: "child.js", source: File.readFile("child.js")}).then(function() {
 	task.getExports().then(function(exports) {
 		return exports.add(1, 1);
 	}).then(function(sum) {

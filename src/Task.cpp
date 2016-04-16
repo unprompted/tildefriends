@@ -105,6 +105,7 @@ Task::Task() {
 
 Task::~Task() {
 	_exportObject.Reset();
+	_sourceObject.Reset();
 
 	{
 		v8::Isolate::Scope isolateScope(_isolate);
@@ -166,7 +167,6 @@ void Task::activate() {
 
 	global->Set(v8::String::NewFromUtf8(_isolate, "print"), v8::FunctionTemplate::New(_isolate, print));
 	global->Set(v8::String::NewFromUtf8(_isolate, "setTimeout"), v8::FunctionTemplate::New(_isolate, setTimeout));
-	global->Set(v8::String::NewFromUtf8(_isolate, "require"), v8::FunctionTemplate::New(_isolate, require));
 	global->SetAccessor(v8::String::NewFromUtf8(_isolate, "parent"), parent);
 	global->Set(v8::String::NewFromUtf8(_isolate, "exit"), v8::FunctionTemplate::New(_isolate, exit));
 	global->Set(v8::String::NewFromUtf8(_isolate, "utf8Length"), v8::FunctionTemplate::New(_isolate, utf8Length));
@@ -175,11 +175,16 @@ void Task::activate() {
 	global->SetAccessor(v8::String::NewFromUtf8(_isolate, "version"), version);
 	global->SetAccessor(v8::String::NewFromUtf8(_isolate, "statistics"), statistics);
 	if (_trusted) {
+		std::cout << "parent require\n";
+		global->Set(v8::String::NewFromUtf8(_isolate, "require"), v8::FunctionTemplate::New(_isolate, require));
 		global->Set(v8::String::NewFromUtf8(_isolate, "Database"), v8::FunctionTemplate::New(_isolate, Database::create));
 		global->Set(v8::String::NewFromUtf8(_isolate, "Socket"), v8::FunctionTemplate::New(_isolate, Socket::create));
 		global->Set(v8::String::NewFromUtf8(_isolate, "Task"), v8::FunctionTemplate::New(_isolate, TaskStub::create));
 		global->Set(v8::String::NewFromUtf8(_isolate, "TlsContext"), v8::FunctionTemplate::New(_isolate, TlsContextWrapper::create));
 		File::configure(_isolate, global);
+	} else {
+		std::cout << "setting up child require\n";
+		global->Set(v8::String::NewFromUtf8(_isolate, "require"), v8::FunctionTemplate::New(_isolate, childRequire));
 	}
 
 	v8::Local<v8::Context> context = v8::Context::New(_isolate, 0, global);
@@ -654,29 +659,10 @@ void Task::onReceivePacket(int packetType, const char* begin, size_t length, voi
 			}
 		}
 		break;
-	case kSetTrusted:
+	case kSetRequires:
 		{
-			assert(length == sizeof(bool));
-			bool trusted = false;
-			memcpy(&trusted, begin, sizeof(bool));
-			to->_trusted = trusted;
-		}
-		break;
-	case kAddPath:
-		{
-			v8::Handle<v8::Array> result = v8::Handle<v8::Array>::Cast(Serialize::load(to, from, std::vector<char>(begin, begin + length)));
-			if (!result.IsEmpty()) {
-				for (size_t i = 0; i < result->Length(); ++i) {
-					v8::Handle<v8::Value> handle = result->Get(i);
-					if (!handle.IsEmpty()) {
-						v8::Handle<v8::String> entry = handle.As<v8::String>();
-						if (!entry.IsEmpty()) {
-							v8::String::Utf8Value value(entry);
-							to->_path.push_back(*value);
-						}
-					}
-				}
-			}
+			v8::Handle<v8::Object> result = v8::Handle<v8::Object>::Cast(Serialize::load(to, from, std::vector<char>(begin, begin + length)));
+			to->_sourceObject = v8::Persistent<v8::Object, v8::CopyablePersistentTraits<v8::Object> >(to->_isolate, result);
 		}
 		break;
 	case kActivate:
@@ -685,14 +671,16 @@ void Task::onReceivePacket(int packetType, const char* begin, size_t length, voi
 	case kExecute:
 		{
 			assert(length >= sizeof(promiseid_t));
-			v8::Handle<v8::Value> arg;
 			promiseid_t promise;
 			std::memcpy(&promise, begin, sizeof(promiseid_t));
-			arg = Serialize::load(to, from, std::vector<char>(begin + sizeof(promiseid_t), begin + length));
 			v8::TryCatch tryCatch(to->_isolate);
 			tryCatch.SetCaptureMessage(true);
 			tryCatch.SetVerbose(true);
-			to->execute(*v8::String::Utf8Value(arg));
+			v8::Handle<v8::Value> value = Serialize::load(to, from, std::vector<char>(begin + sizeof(promiseid_t), begin + length));
+			v8::Handle<v8::Object> object = v8::Handle<v8::Object>::Cast(value);
+			v8::Handle<v8::String> source = v8::Handle<v8::String>::Cast(object->Get(v8::String::NewFromUtf8(to->_isolate, "source")));
+			v8::Handle<v8::String> name = v8::Handle<v8::String>::Cast(object->Get(v8::String::NewFromUtf8(to->_isolate, "name")));
+			to->executeSource(source, name);
 			if (tryCatch.HasCaught()) {
 				sendPromiseReject(to, from, promise, Serialize::store(to, tryCatch));
 			}
@@ -746,6 +734,7 @@ std::string Task::resolveRequire(const std::string& require) {
 }
 
 void Task::require(const v8::FunctionCallbackInfo<v8::Value>& args) {
+	std::cout << "regular require\n";
 	v8::HandleScope scope(args.GetIsolate());
 	Task* task = Task::get(args.GetIsolate());
 	v8::String::Utf8Value pathValue(args[0]);
@@ -786,5 +775,60 @@ void Task::require(const v8::FunctionCallbackInfo<v8::Value>& args) {
 		}
 	} else {
 		args.GetReturnValue().Set(args.GetIsolate()->ThrowException(v8::Exception::Error(v8::String::NewFromUtf8(args.GetIsolate(), "require(): No module specified."))));
+	}
+}
+
+v8::Handle<v8::Value> Task::executeSource(v8::Handle<v8::String>& source, v8::Handle<v8::String>& name) {
+	v8::Isolate::Scope isolateScope(_isolate);
+	v8::HandleScope handleScope(_isolate);
+	v8::Context::Scope contextScope(v8::Local<v8::Context>::New(_isolate, _context));
+
+	v8::Handle<v8::Value> result;
+	v8::String::Utf8Value nameValue(name);
+	if (!source.IsEmpty()) {
+		v8::Handle<v8::Script> script = v8::Script::Compile(source, name);
+		if (!script.IsEmpty()) {
+			script->Run();
+		} else {
+			result = _isolate->ThrowException(v8::Exception::Error(v8::String::NewFromUtf8(_isolate, (std::string("Failed to compile ") + *nameValue + ".").c_str())));
+		}
+	} else {
+		result = _isolate->ThrowException(v8::Exception::Error(v8::String::NewFromUtf8(_isolate, (std::string("Failed to load ") + *nameValue + ".").c_str())));
+	}
+	return result;
+}
+
+void Task::childRequire(const v8::FunctionCallbackInfo<v8::Value>& args) {
+	std::cout << "childRequire\n";
+	v8::HandleScope scope(args.GetIsolate());
+	Task* task = Task::get(args.GetIsolate());
+
+	v8::Handle<v8::Object> requiresObject = v8::Local<v8::Object>::New(args.GetIsolate(), task->_sourceObject);
+	if (!requiresObject.IsEmpty()) {
+		v8::Handle<v8::String> name = args[0]->ToString();
+		v8::String::Utf8Value nameValue(name);
+		ScriptExportMap::iterator it = task->_scriptExports.find(*nameValue);
+		if (it != task->_scriptExports.end()) {
+			v8::Handle<v8::Object> exports = v8::Local<v8::Object>::New(args.GetIsolate(), it->second);
+			args.GetReturnValue().Set(exports);
+		} else {
+			v8::Handle<v8::Object> exports = v8::Object::New(args.GetIsolate());
+			v8::Handle<v8::String> source = v8::Handle<v8::String>::Cast(requiresObject->Get(args[0]));
+			if (!source.IsEmpty()) {
+				v8::Handle<v8::Object> global = args.GetIsolate()->GetCurrentContext()->Global();
+				v8::Handle<v8::Value> oldExports = global->Get(v8::String::NewFromUtf8(args.GetIsolate(), "exports"));
+				global->Set(v8::String::NewFromUtf8(args.GetIsolate(), "exports"), exports);
+				v8::Handle<v8::Script> script = v8::Script::Compile(source, name);
+				if (!script.IsEmpty()) {
+					script->Run();
+				} else {
+					args.GetReturnValue().Set(args.GetIsolate()->ThrowException(v8::Exception::Error(v8::String::NewFromUtf8(args.GetIsolate(), (std::string("Failed to compile ") + *nameValue + ".").c_str()))));
+				}
+				global->Set(v8::String::NewFromUtf8(args.GetIsolate(), "exports"), oldExports);
+				args.GetReturnValue().Set(exports);
+			} else {
+				args.GetReturnValue().Set(args.GetIsolate()->ThrowException(v8::Exception::Error(v8::String::NewFromUtf8(args.GetIsolate(), (std::string("Failed to load ") + *nameValue + ".").c_str()))));
+			}
+		}
 	}
 }

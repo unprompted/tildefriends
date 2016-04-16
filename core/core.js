@@ -328,13 +328,18 @@ function getProcess(packageOwner, packageName, key, options) {
 				}
 			}
 			if (manifest && manifest.require) {
-				process.task.addPath(manifest.require.map(packageNameToPath.bind(process)));
+				let source = {};
+				for (let i in manifest.require) {
+					let name = manifest.require[i];
+					source[manifest[i]] = File.readFile("packages/" + process.packageOwner + "/" + name + "/" + name + ".js");
+				}
+				process.task.setRequires(source);
 			}
 			process.task.setImports(imports);
 			print("Activating task");
 			process.task.activate();
 			print("Executing task");
-			process.task.execute(fileName).then(function() {
+			process.task.execute({name: fileName, source: File.readFile(fileName)}).then(function() {
 				print("Task ready");
 				broadcastEvent('onSessionBegin', [getUser(process, process)]);
 				resolveReady(process);

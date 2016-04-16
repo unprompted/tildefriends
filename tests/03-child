@@ -6,7 +6,7 @@ task.onExit = function() {
 	print("child exited");
 };
 task.activate();
-task.execute("child.js").then(function() {
+task.execute({name: "child.js", source: File.readFile("child.js")}).then(function() {
 	print("child started");
 });
 EOF

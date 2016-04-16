@@ -83,7 +83,6 @@ void TaskStub::create(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::Handle<v8::External> data = v8::External::New(args.GetIsolate(), stub);
 
 	v8::Handle<v8::ObjectTemplate> taskTemplate = v8::ObjectTemplate::New(args.GetIsolate());
-	taskTemplate->SetAccessor(v8::String::NewFromUtf8(args.GetIsolate(), "trusted"), getTrusted, setTrusted, data);
 	taskTemplate->Set(v8::String::NewFromUtf8(args.GetIsolate(), "setImports"), v8::FunctionTemplate::New(args.GetIsolate(), setImports, data));
 	taskTemplate->Set(v8::String::NewFromUtf8(args.GetIsolate(), "getExports"), v8::FunctionTemplate::New(args.GetIsolate(), getExports, data));
 	taskTemplate->SetAccessor(v8::String::NewFromUtf8(args.GetIsolate(), "onExit"), getOnExit, setOnExit, data);
@@ -91,7 +90,7 @@ void TaskStub::create(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	taskTemplate->Set(v8::String::NewFromUtf8(args.GetIsolate(), "execute"), v8::FunctionTemplate::New(args.GetIsolate(), TaskStub::execute, data));
 	taskTemplate->Set(v8::String::NewFromUtf8(args.GetIsolate(), "kill"), v8::FunctionTemplate::New(args.GetIsolate(), TaskStub::kill, data));
 	taskTemplate->Set(v8::String::NewFromUtf8(args.GetIsolate(), "statistics"), v8::FunctionTemplate::New(args.GetIsolate(), TaskStub::statistics, data));
-	taskTemplate->Set(v8::String::NewFromUtf8(args.GetIsolate(), "addPath"), v8::FunctionTemplate::New(args.GetIsolate(), addPath, data));
+	taskTemplate->Set(v8::String::NewFromUtf8(args.GetIsolate(), "setRequires"), v8::FunctionTemplate::New(args.GetIsolate(), setRequires, data));
 	taskTemplate->SetInternalFieldCount(1);
 
 	v8::Handle<v8::Object> taskObject = taskTemplate->NewInstance();
@@ -166,17 +165,6 @@ void TaskStub::onProcessExit(uv_process_t* process, int64_t status, int terminat
 void TaskStub::onRelease(const v8::WeakCallbackData<v8::Object, TaskStub>& data) {
 }
 
-void TaskStub::getTrusted(v8::Local<v8::String> property, const v8::PropertyCallbackInfo<v8::Value>& args) {
-	args.GetReturnValue().Set(v8::Boolean::New(args.GetIsolate(), false));
-}
-
-void TaskStub::setTrusted(v8::Local<v8::String> property, v8::Local<v8::Value> value, const v8::PropertyCallbackInfo<void>& args) {
-	if (TaskStub* stub = TaskStub::get(args.Data())) {
-		bool trusted = value->BooleanValue();
-		stub->_stream.send(kSetTrusted, reinterpret_cast<char*>(&trusted), sizeof(trusted));
-	}
-}
-
 void TaskStub::getExports(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	if (TaskStub* stub = TaskStub::get(args.Data())) {
 		TaskTryCatch tryCatch(stub->_owner);
@@ -196,11 +184,11 @@ void TaskStub::setImports(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	}
 }
 
-void TaskStub::addPath(const v8::FunctionCallbackInfo<v8::Value>& args) {
+void TaskStub::setRequires(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	if (TaskStub* stub = TaskStub::get(args.Data())) {
 		std::vector<char> buffer;
 		Serialize::store(Task::get(args.GetIsolate()), buffer, args[0]);
-		stub->_stream.send(kAddPath, &*buffer.begin(), buffer.size());
+		stub->_stream.send(kSetRequires, &*buffer.begin(), buffer.size());
 	}
 }
 

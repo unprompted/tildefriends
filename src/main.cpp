@@ -43,12 +43,9 @@ void shedPrivileges() {
 	if (setrlimit(RLIMIT_MSGQUEUE, &zeroLimit) != 0) {
 		perror("setrlimit(RLIMIT_MSGQUEUE, {0, 0})");
 	}
-	/*
-	XXX
 	if (setrlimit(RLIMIT_NOFILE, &zeroLimit) != 0) {
 		perror("setrlimit(RLIMIT_NOFILE, {0, 0})");
 	}
-	*/
 	if (setrlimit(RLIMIT_NPROC, &zeroLimit) != 0) {
 		perror("setrlimit(RLIMIT_NPROC, {0, 0})");
 	}

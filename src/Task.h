@@ -30,8 +30,7 @@ enum MessageType {
 	kInvokeExport,
 	kReleaseExport,
 	kReleaseImport,
-	kSetTrusted,
-	kAddPath,
+	kSetRequires,
 	kActivate,
 	kExecute,
 	kKill,
@@ -120,6 +119,7 @@ private:
 
 	v8::Persistent<v8::Object, v8::CopyablePersistentTraits<v8::Object> > _importObject;
 	v8::Persistent<v8::Object, v8::CopyablePersistentTraits<v8::Object> > _exportObject;
+	v8::Persistent<v8::Object, v8::CopyablePersistentTraits<v8::Object> > _sourceObject;
 
 	v8::Handle<v8::Object> getStatistics();
 
@@ -129,6 +129,7 @@ private:
 	static void exit(const v8::FunctionCallbackInfo<v8::Value>& args);
 	static void print(const v8::FunctionCallbackInfo<v8::Value>& args);
 	static void require(const v8::FunctionCallbackInfo<v8::Value>& args);
+	static void childRequire(const v8::FunctionCallbackInfo<v8::Value>& args);
 
 	static void setTimeout(const v8::FunctionCallbackInfo<v8::Value>& args);
 	static void timeoutCallback(uv_timer_t* handle);
@@ -157,6 +158,7 @@ private:
 	static void sendPromiseExportMessage(Task* from, TaskStub* to, MessageType messageType, promiseid_t promiseId, exportid_t exportId, v8::Handle<v8::Value> result);
 
 	static v8::Handle<v8::String> loadFile(v8::Isolate* isolate, const char* fileName);
+	v8::Handle<v8::Value> executeSource(v8::Handle<v8::String>& source, v8::Handle<v8::String>& name);
 
 	friend struct ImportRecord;
 	friend class TaskStub;
