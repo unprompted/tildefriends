@@ -175,7 +175,6 @@ void Task::activate() {
 	global->SetAccessor(v8::String::NewFromUtf8(_isolate, "version"), version);
 	global->SetAccessor(v8::String::NewFromUtf8(_isolate, "statistics"), statistics);
 	if (_trusted) {
-		std::cout << "parent require\n";
 		global->Set(v8::String::NewFromUtf8(_isolate, "require"), v8::FunctionTemplate::New(_isolate, require));
 		global->Set(v8::String::NewFromUtf8(_isolate, "Database"), v8::FunctionTemplate::New(_isolate, Database::create));
 		global->Set(v8::String::NewFromUtf8(_isolate, "Socket"), v8::FunctionTemplate::New(_isolate, Socket::create));
@@ -183,7 +182,6 @@ void Task::activate() {
 		global->Set(v8::String::NewFromUtf8(_isolate, "TlsContext"), v8::FunctionTemplate::New(_isolate, TlsContextWrapper::create));
 		File::configure(_isolate, global);
 	} else {
-		std::cout << "setting up child require\n";
 		global->Set(v8::String::NewFromUtf8(_isolate, "require"), v8::FunctionTemplate::New(_isolate, childRequire));
 	}
 
@@ -734,7 +732,6 @@ std::string Task::resolveRequire(const std::string& require) {
 }
 
 void Task::require(const v8::FunctionCallbackInfo<v8::Value>& args) {
-	std::cout << "regular require\n";
 	v8::HandleScope scope(args.GetIsolate());
 	Task* task = Task::get(args.GetIsolate());
 	v8::String::Utf8Value pathValue(args[0]);
@@ -799,7 +796,6 @@ v8::Handle<v8::Value> Task::executeSource(v8::Handle<v8::String>& source, v8::Ha
 }
 
 void Task::childRequire(const v8::FunctionCallbackInfo<v8::Value>& args) {
-	std::cout << "childRequire\n";
 	v8::HandleScope scope(args.GetIsolate());
 	Task* task = Task::get(args.GetIsolate());
 
