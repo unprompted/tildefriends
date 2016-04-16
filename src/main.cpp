@@ -11,11 +11,49 @@
 #if !defined (_WIN32) && !defined (__MACH__)
 #include <signal.h>
 #include <sys/prctl.h>
+#include <sys/resource.h>
 #include <unistd.h>
 #endif
 
 v8::Platform* gPlatform = 0;
 
+void shedPrivileges() {
+#if !defined (_WIN32) && !defined (__MACH__)
+	struct rlimit zeroLimit;
+	zeroLimit.rlim_cur = 0;
+	zeroLimit.rlim_max = 0;
+
+	// RLIMIT_AS
+	// RLIMIT_CORE
+	// RLIMIT_CPU
+	// RLIMIT_DATA
+	// RLIMIT_FSIZE
+	// RLIMIT_RSS
+	// RLIMIT_RTPRIO
+	// RLIMIT_RTTIME
+	// RLIMIT_SIGPENDING
+	// RLIMIT_STACK
+
+	if (setrlimit(RLIMIT_FSIZE, &zeroLimit) != 0) {
+		perror("setrlimit(RLIMIT_FSIZE, {0, 0})");
+	}
+	if (setrlimit(RLIMIT_LOCKS, &zeroLimit) != 0) {
+		perror("setrlimit(RLIMIT_LOCKS, {0, 0})");
+	}
+	if (setrlimit(RLIMIT_MSGQUEUE, &zeroLimit) != 0) {
+		perror("setrlimit(RLIMIT_MSGQUEUE, {0, 0})");
+	}
+	/*
+	XXX
+	if (setrlimit(RLIMIT_NOFILE, &zeroLimit) != 0) {
+		perror("setrlimit(RLIMIT_NOFILE, {0, 0})");
+	}
+	*/
+	if (setrlimit(RLIMIT_NPROC, &zeroLimit) != 0) {
+		perror("setrlimit(RLIMIT_NPROC, {0, 0})");
+	}
+#endif
+}
 
 int main(int argc, char* argv[]) {
 	int result = 0;
@@ -50,6 +88,7 @@ int main(int argc, char* argv[]) {
 #endif
 		Task task;
 		task.configureFromStdin();
+		shedPrivileges();
 		task.activate();
 		task.run();
 	} else {
