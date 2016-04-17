@@ -82,6 +82,14 @@ bool TlsContext_openssl::setCertificate(const char* certificate) {
 	BIO_puts(bio, certificate);
 	X509* x509 = PEM_read_bio_X509(bio, 0, 0, 0);
 	result = SSL_CTX_use_certificate(_context, x509);
+	while (true) {
+		x509 = PEM_read_bio_X509(bio, 0, 0, 0);
+		if (x509) {
+			SSL_CTX_add_extra_chain_cert(_context, x509);
+		} else {
+			break;
+		}
+	}
 	BIO_free(bio);
 	return result == 1;
 }
