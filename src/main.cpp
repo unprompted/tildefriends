@@ -18,7 +18,7 @@
 v8::Platform* gPlatform = 0;
 
 void shedPrivileges() {
-#if !defined (_WIN32) && !defined (__MACH__)
+#if !defined (_WIN32)
 	struct rlimit zeroLimit;
 	zeroLimit.rlim_cur = 0;
 	zeroLimit.rlim_max = 0;
@@ -36,19 +36,26 @@ void shedPrivileges() {
 
 	if (setrlimit(RLIMIT_FSIZE, &zeroLimit) != 0) {
 		perror("setrlimit(RLIMIT_FSIZE, {0, 0})");
-	}
-	if (setrlimit(RLIMIT_LOCKS, &zeroLimit) != 0) {
-		perror("setrlimit(RLIMIT_LOCKS, {0, 0})");
-	}
-	if (setrlimit(RLIMIT_MSGQUEUE, &zeroLimit) != 0) {
-		perror("setrlimit(RLIMIT_MSGQUEUE, {0, 0})");
+		exit(-1);
 	}
 	if (setrlimit(RLIMIT_NOFILE, &zeroLimit) != 0) {
 		perror("setrlimit(RLIMIT_NOFILE, {0, 0})");
+		exit(-1);
 	}
 	if (setrlimit(RLIMIT_NPROC, &zeroLimit) != 0) {
 		perror("setrlimit(RLIMIT_NPROC, {0, 0})");
+		exit(-1);
 	}
+#if !defined (__MACH__)
+	if (setrlimit(RLIMIT_LOCKS, &zeroLimit) != 0) {
+		perror("setrlimit(RLIMIT_LOCKS, {0, 0})");
+		exit(-1);
+	}
+	if (setrlimit(RLIMIT_MSGQUEUE, &zeroLimit) != 0) {
+		perror("setrlimit(RLIMIT_MSGQUEUE, {0, 0})");
+		exit(-1);
+	}
+#endif
 #endif
 }
 

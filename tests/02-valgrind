@@ -1,5 +1,10 @@
 #!/bin/bash
 
+if [ ! -x /usr/bin/valgrind ]; then
+	echo "SKIP"
+	exit 0
+fi
+
 cat > test.js << EOF
 print("hi");
 EOF
