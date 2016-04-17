@@ -331,7 +331,7 @@ function getProcess(packageOwner, packageName, key, options) {
 				let source = {};
 				for (let i in manifest.require) {
 					let name = manifest.require[i];
-					source[manifest[i]] = File.readFile("packages/" + process.packageOwner + "/" + name + "/" + name + ".js");
+					source[name] = File.readFile("packages/" + process.packageOwner + "/" + name + "/" + name + ".js");
 				}
 				process.task.setRequires(source);
 			}
