@@ -82,7 +82,7 @@ function editPage(event) {
 				}
 				function textChanged() {
 					var preview = document.getElementById("preview");
-					preview.innerHTML = markdeep.format(gEditor.getValue(), true);
+					preview.innerHTML = markdeep.format(gEditor.getValue() + "\\n", false);
 				}
 				window.markdeepOptions = {mode: 'script'};
 			</script>
