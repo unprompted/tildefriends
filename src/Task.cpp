@@ -761,7 +761,7 @@ void Task::require(const v8::FunctionCallbackInfo<v8::Value>& args) {
 						script->Run();
 						std::cout << "Script " << path << " completed\n";
 					} else {
-						std::cerr << "Failed to compile script.\n";
+						std::cerr << "Failed to compile " << path << ".\n";
 					}
 					global->Set(v8::String::NewFromUtf8(args.GetIsolate(), "exports"), oldExports);
 					args.GetReturnValue().Set(exports);
@@ -787,7 +787,7 @@ v8::Handle<v8::Value> Task::executeSource(v8::Handle<v8::String>& source, v8::Ha
 		if (!script.IsEmpty()) {
 			script->Run();
 		} else {
-			result = _isolate->ThrowException(v8::Exception::Error(v8::String::NewFromUtf8(_isolate, (std::string("Failed to compile ") + *nameValue + ".").c_str())));
+			std::cerr << "Failed to compile " << *nameValue << ".\n";
 		}
 	} else {
 		result = _isolate->ThrowException(v8::Exception::Error(v8::String::NewFromUtf8(_isolate, (std::string("Failed to load ") + *nameValue + ".").c_str())));
@@ -818,7 +818,7 @@ void Task::childRequire(const v8::FunctionCallbackInfo<v8::Value>& args) {
 				if (!script.IsEmpty()) {
 					script->Run();
 				} else {
-					args.GetReturnValue().Set(args.GetIsolate()->ThrowException(v8::Exception::Error(v8::String::NewFromUtf8(args.GetIsolate(), (std::string("Failed to compile ") + *nameValue + ".").c_str()))));
+					std::cerr << "Failed to compile " << *nameValue << ".\n";
 				}
 				global->Set(v8::String::NewFromUtf8(args.GetIsolate(), "exports"), oldExports);
 				args.GetReturnValue().Set(exports);
