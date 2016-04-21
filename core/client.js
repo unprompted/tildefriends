@@ -130,7 +130,9 @@ function receive(data) {
 				send({event: "hashChange", hash: window.location.hash});
 			}
 		} else if (line && line[0] && line[0].action == "notify") {
-			new Notification(line[0].title, line[0].options);
+			if (window.Notification) {
+				new Notification(line[0].title, line[0].options);
+			}
 		} else if (line && line[0] && line[0].action == "title") {
 			window.document.title = line[0].value;
 		} else if (line && line[0] && line[0].action == "prompt") {
@@ -413,7 +415,7 @@ function onMessage(event) {
 var gSocket;
 
 window.addEventListener("load", function() {
-	if (Notification) {
+	if (window.Notification) {
 		Notification.requestPermission();
 	}
 	var input = document.getElementById("input");
