@@ -285,11 +285,15 @@ function handleWebSocketRequest(request, response, client) {
 		logError(client.peerName + " - - [" + new Date() + "] " + error);
 	});
 
-	response.writeHead(101, {
+	let headers = {
 		"Upgrade": "websocket",
 		"Connection": "Upgrade",
 		"Sec-WebSocket-Accept": webSocketAcceptResponse(request.headers["sec-websocket-key"]),
-	});
+	};
+	if (request.headers["sec-websocket-version"] != "13") {
+		headers["Sec-WebSocket-Version"] = "13";
+	}
+	response.writeHead(101, headers);
 }
 
 function webSocketAcceptResponse(key) {
