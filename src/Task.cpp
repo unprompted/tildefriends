@@ -323,7 +323,6 @@ void Task::invokeExport(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	}
 
 	v8::Local<v8::Array> array = v8::Array::New(args.GetIsolate(), args.Length() + 1);
-	array->Set(0, args.This());
 	for (int i = 0; i < args.Length(); ++i) {
 		array->Set(i + 1, args[i]);
 	}
