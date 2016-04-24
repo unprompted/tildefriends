@@ -150,9 +150,10 @@ function postMessageInternal(from, to, message) {
 	return invoke(to.eventHandlers['onMessage'], [getUser(from, from), message]);
 }
 
-function getService(service) {
-	var process = this;
-	var serviceProcess = getServiceProcess(process.packageOwner, process.packageName, service);
+function getService(service, packageName) {
+	let process = this;
+	let serviceName = process.packageName + '_' + service;
+	let serviceProcess = getServiceProcess(process.packageOwner, packageName || process.packageName, serviceName);
 	return serviceProcess.ready.then(function() {
 		return {
 			postMessage: postMessageInternal.bind(process, process, serviceProcess),
