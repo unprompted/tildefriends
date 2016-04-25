@@ -1,0 +1,30 @@
+#!/usr/bin/python
+
+import os
+import shutil
+import subprocess
+import sys
+import zipfile
+
+if sys.argv[1] == 'dump':
+	with zipfile.ZipFile('data.zip', 'w') as z:
+		for root, dirs, files in os.walk('data'):
+			for f in files:
+				if f == 'data.mdb':
+					database = subprocess.check_output(['mdb_dump', root])
+					z.writestr(root, database)
+elif sys.argv[1] == 'load':
+	with zipfile.ZipFile('data.zip', 'r') as z:
+		for name in z.namelist():
+			database = z.read(name)
+			if os.path.exists(name):
+				shutil.rmtree(name)
+			os.makedirs(name)
+			p = subprocess.Popen(['mdb_load', name], stdin=subprocess.PIPE)
+			p.communicate(database)
+			assert p.wait() == 0
+		#for root, dirs, files in os.walk('data'):
+			#for f in files:
+				#if f == 'data.mdb':
+					#database = subprocess.check_output(['mdb_dump', root])
+					#z.writestr(root, database)
