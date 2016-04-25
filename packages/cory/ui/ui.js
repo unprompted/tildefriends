@@ -5,7 +5,8 @@ function fileList(settings) {
 	terminal.setEcho(false);
 	terminal.clear();
 	terminal.print(settings.title);
-	if (core.user.credentials.permissions
+	if (core.user.credentials
+		&& core.user.credentials.permissions
 		&& core.user.credentials.permissions.authenticated) {
 		terminal.print({command: "new"});
 	}
@@ -80,7 +81,8 @@ function fileList(settings) {
 		});
 		for (var i = 0; i < entries.length; i++) {
 			if (entries[i].substring(0, prefix.length) == prefix) {
-				if (core.user.credentials.permissions
+				if (core.user.credentials
+					&& core.user.credentials.permissions
 					&& core.user.credentials.permissions.authenticated) {
 					terminal.print(
 						"* ",

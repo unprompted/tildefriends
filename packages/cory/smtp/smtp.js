@@ -4,71 +4,96 @@
 
 terminal.print("Hello, world!");
 
-let kFrom = core.user.name + "@unprompted.com";
-let kTo = "test@unprompted.com";
-let kSubject = "Hello, world!";
-let kBody = "This is the body of the email."
+let kServer = "rowlf.unprompted.com";
 
-let inBuffer = "";
-let sentFrom = false;
-let sentTo = false;
-let sentData = false;
+class Smtp {
+	constructor() {
+		this.inBuffer = "";
+		this.sentFrom = false;
+		this.sentTo = false;
+		this.sentData = false;
+	}
 
-function lineReceived(socket, line) {
-	terminal.print("> ", line);
-	let parts = line.split(" ", 1);
-	terminal.print(JSON.stringify(parts));
-	if (parts[0] == "220") {
-		socket.write("HELO rowlf.unprompted.com\r\n");
-	} else if (parts[0] == "250") {
-		if (!sentFrom) {
-			terminal.print("FROM");
-			socket.write("MAIL FROM: " + kFrom + "\r\n");
-			sentFrom = true;
-		} else if (!sentTo) {
-			terminal.print("TO");
-			socket.write("RCPT TO: " + kTo + "\r\n");
-			sentTo = true;
-		} else if (!sentData) {
-			terminal.print("DATA");
-			socket.write("DATA\r\n");
-			sentData = true;
+	send(message) {
+		let self = this;
+		self.message = message;
+		return new Promise(function(resolve, reject) {
+			self.resolve = resolve;
+			self.reject = reject;
+			network.newConnection().then(function(socket) {
+				self.socket = socket;
+				socket.read(function(data) {
+					try {
+						self.dataReceived(data);
+					} catch (error) {
+						reject(error.message);
+					}
+				});
+				socket.connect("localhost", 25).catch(reject);
+			});
+		});
+	}
+
+	dataReceived(data) {
+		let self = this;
+		if (data === null) {
+			return;
+		}
+		self.inBuffer += data;
+		let again = true;
+		while (again) {
+			again = false;
+			let end = self.inBuffer.indexOf("\n");
+			if (end != -1) {
+				again = true;
+				let line = self.inBuffer.substring(0, end);
+				self.inBuffer = self.inBuffer.substring(end + 1);
+				self.lineReceived(line);
+			}
+		}
+	}
+
+	lineReceived(line) {
+		let self = this;
+		let parts = line.split(" ", 1);
+		if (parts[0] == "220") {
+			self.socket.write("HELO " + kServer + "\r\n");
+		} else if (parts[0] == "250") {
+			if (!self.sentFrom) {
+				self.socket.write("MAIL FROM: " + self.message.from + "\r\n");
+				self.sentFrom = true;
+			} else if (!self.sentTo) {
+				self.socket.write("RCPT TO: " + self.message.to + "\r\n");
+				self.sentTo = true;
+			} else if (!self.sentData) {
+				self.socket.write("DATA\r\n");
+				self.sentData = true;
+			} else {
+				self.socket.write("QUIT\r\n").then(self.resolve);
+			}
+		} else if (parts[0] == "354") {
+			self.socket.write("Subject: " + self.message.subject + "\r\n\r\n" + self.message.body + "\r\n.\r\n");
 		} else {
-			terminal.print("QUIT");
-			socket.write("QUIT\r\n");
-		}
-	} else if (parts[0] == "354") {
-		terminal.print("MESSAGE");
-		socket.write("Subject: " + kSubject + "\r\n\r\n" + kBody + "\r\n.\r\n");
-	}
-}
-
-function dataReceived(socket, data) {
-	if (data === null) {
-		return;
-	}
-	terminal.print(data);
-	inBuffer += data;
-	let again = true;
-	while (again) {
-		again = false;
-		let end = inBuffer.indexOf("\n");
-		if (end != -1) {
-			again = true;
-			let line = inBuffer.substring(0, end);
-			inBuffer = inBuffer.substring(end + 1);
-			lineReceived(socket, line);
+			self.reject("Unexpected response: " + line);
 		}
 	}
 }
 
-network.newConnection().then(function(socket) {
-	socket.read(function(data) {
-		try {
-			dataReceived(socket, data);
-		} catch (error) {
-			terminal.print("ERROR: ", error.message);
-		}
+function sendMail(message) {
+	return new Smtp().send(message);
+}
+
+core.register("onInput", function(input) {
+	sendMail({
+		from: core.user.name + "@unprompted.com",
+		to: "test1@unprompted.com",
+		subject: input,
+		body: input,
+	}).then(function() {
+		terminal.print("sent");
+	}).catch(function(error) {
+		terminal.print("error: ", error);
 	});
-	socket.connect("localhost", 25);
 });
+
+exports.sendMail = sendMail;

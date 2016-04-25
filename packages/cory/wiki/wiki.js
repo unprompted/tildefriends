@@ -109,7 +109,7 @@ function editPage(event) {
 		<body>
 			<div id="menu">
 				<input type="button" value="Back" onclick="index()">
-` + (core.user.credentials.permissions.authenticated ? `
+` + (core.user.credentials.permissions && core.user.credentials.permissions.authenticated ? `
 				<input type="button" value="Save" onclick="submit()">
 ` : "") +
 	`			<a target="_top" href="https://casual-effects.com/markdeep/">Markdeep</a>
