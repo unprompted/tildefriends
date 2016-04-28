@@ -344,6 +344,9 @@ function getProcess(packageOwner, packageName, key, options) {
 				print("Task ready");
 				broadcastEvent('onSessionBegin', [getUser(process, process)]);
 				resolveReady(process);
+				if (process.terminal) {
+					process.terminal.print({action: "ready"});
+				}
 			}).catch(function(error) {
 				printError(process.terminal, error);
 				rejectReady();
