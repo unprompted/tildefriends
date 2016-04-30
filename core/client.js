@@ -171,6 +171,19 @@ function print(terminal, data) {
 	autoScroll(terminal);
 }
 
+function printSvg(container, data, name, namespace) {
+	var node = document.createElementNS("http://www.w3.org/2000/svg", name);
+	for (var i in data.attributes) {
+		node.setAttribute(i, data.attributes[i]);
+	}
+	if (data.children) {
+		for (var i in data.children) {
+			node.appendChild(printSvg(node, data.children[i], data.children[i].name));
+		}
+	}
+	return node;
+}
+
 function printStructured(container, data) {
 	if (typeof data == "string") {
 		container.appendChild(document.createTextNode(data));
@@ -197,6 +210,8 @@ function printStructured(container, data) {
 			if (data.name) {
 				node.setAttribute("id", "iframe_" + data.name);
 			}
+		} else if (data.svg) {
+			node = printSvg(container, data.svg, "svg");
 		} else if (data.image) {
 			node = document.createElement("img");
 			node.setAttribute("src", data.image);
