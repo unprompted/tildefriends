@@ -8,6 +8,7 @@ var kStaticFiles = [
 	{uri: '/client.js', path: 'client.js', type: 'text/javascript; charset=utf-8'},
 	{uri: '/editor.js', path: 'editor.js', type: 'text/javascript; charset=utf-8'},
 	{uri: '/agplv3-88x31.png', path: 'agplv3-88x31.png', type: 'image/png'},
+	{uri: '/robots.txt', path: 'robots.txt', type: 'text/plain; charset=utf-8'},
 ];
 
 var auth = require('auth');
@@ -69,44 +70,12 @@ Terminal.prototype.print = function() {
 	this._lastWrite = new Date();
 }
 
-Terminal.prototype.notify = function(title, options) {
-	this.print({action: "notify", title: title, options: options});
-}
-
-Terminal.prototype.setTitle = function(value) {
-	this.print({action: "title", value: value});
-}
-
-Terminal.prototype.setPrompt = function(value) {
-	this.print({action: "prompt", value: value});
-}
-
-Terminal.prototype.setPassword = function(value) {
-	this.print({action: "password", value: value});
-}
-
-Terminal.prototype.setHash = function(value) {
-	this.print({action: "hash", value: value});
-}
-
 Terminal.prototype.notifyUpdate = function() {
 	this.print({action: "update"});
 }
 
-Terminal.prototype.split = function(options) {
-	this.print({action: "split", options: options});
-}
-
 Terminal.prototype.select = function(name) {
 	this._selected = name;
-}
-
-Terminal.prototype.postMessageToIframe = function(name, message) {
-	this.print({action: "postMessageToIframe", name: name, message: message});
-}
-
-Terminal.prototype.clear = function() {
-	this.print({action: "clear"});
 }
 
 Terminal.prototype.ping = function() {
@@ -134,6 +103,17 @@ Terminal.prototype.cork = function() {
 Terminal.prototype.uncork = function() {
 	if (--this._corked == 0) {
 		this.dispatch();
+	}
+}
+
+Terminal.prototype.makeFunction = function(api) {
+	let self = this;
+	return function() {
+		let message = {action: api[0]};
+		for (let i = 1; i < api.length; i++) {
+			message[api[i]] = arguments[i - 1];
+		}
+		self.print(message);
 	}
 }
 
@@ -177,6 +157,7 @@ function socket(request, response, client) {
 				var sessionId = makeSessionId();
 				response.send(JSON.stringify({lines: [{action: "session", sessionId: sessionId, credentials: credentials}]}), 0x1);
 
+				options.terminalApi = message.terminalApi || [];
 				process = getSessionProcess(packageOwner, packageName, sessionId, options);
 				process.terminal.readOutput(function(message) {
 					response.send(JSON.stringify(message), 0x1);

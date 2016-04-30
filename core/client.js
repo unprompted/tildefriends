@@ -133,18 +133,18 @@ function receive(data) {
 			if (window.Notification) {
 				new Notification(line[0].title, line[0].options);
 			}
-		} else if (line && line[0] && line[0].action == "title") {
+		} else if (line && line[0] && line[0].action == "setTitle") {
 			window.document.title = line[0].value;
-		} else if (line && line[0] && line[0].action == "prompt") {
+		} else if (line && line[0] && line[0].action == "setPrompt") {
 			var prompt = document.getElementById("prompt");
 			while (prompt.firstChild) {
 				prompt.removeChild(prompt.firstChild);
 			}
 			prompt.appendChild(document.createTextNode(line[0].value));
-		} else if (line && line[0] && line[0].action == "password") {
+		} else if (line && line[0] && line[0].action == "setPassword") {
 			var prompt = document.getElementById("input");
 			prompt.setAttribute("type", line[0].value ? "password" : "text");
-		} else if (line && line[0] && line[0].action == "hash") {
+		} else if (line && line[0] && line[0].action == "setHash") {
 			window.location.hash = line[0].value;
 		} else if (line && line[0] && line[0].action == "update") {
 			document.getElementById("update").setAttribute("Style", "display: inline");
@@ -436,6 +436,16 @@ window.addEventListener("load", function() {
 		gSocket.send(JSON.stringify({
 			action: "hello",
 			path: window.location.pathname,
+			terminalApi: [
+				['clear'],
+				['notify', 'title', 'options'],
+				['postMessageToIframe', 'name', 'message'],
+				['setHash', 'value'],
+				['setPassword', 'value'],
+				['setPrompt', 'value'],
+				['setTitle', 'value'],
+				['split', 'options'],
+			],
 		}));
 	}
 	gSocket.onmessage = function(event) {

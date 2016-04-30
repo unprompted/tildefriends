@@ -118,12 +118,12 @@ function testEdit(event) {
 	});
 }
 
-if (imports.terminal) {
+/*if (imports.terminal) {
 	fileList({
 		title: "Test File List",
 		prefix: "fileList_",
 		edit: testEdit,
 	});
-}
+}*/
 
 exports.fileList = fileList;

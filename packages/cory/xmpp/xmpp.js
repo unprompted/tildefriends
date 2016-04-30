@@ -783,7 +783,7 @@ function schedulePing(socket) {
 terminal.split([
 	{type: "horizontal", children: [
 		{name: "terminal", grow: 1},
-		{name: "users", basis: "2in", grow: 0, shrink: 0},
+		{name: "users", basis: "2in", grow: "0", shrink: "0"},
 	]},
 ]);
 terminal.select("terminal");

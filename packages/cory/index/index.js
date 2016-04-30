@@ -1,5 +1,7 @@
 "use strict";
 
+//! {"description": "A list of all packages and connected users"}
+
 core.register("onSessionBegin", index);
 core.register("onSessionEnd", index);
 
@@ -64,7 +66,8 @@ function index() {
 			terminal.print(
 				"* ",
 				{href: "/~" + app.owner + "/" + app.name},
-				message);
+				message,
+				app.manifest && app.manifest.description ? " - " + app.manifest.description.toString() : "");
 		});
 		terminal.uncork();
 	});

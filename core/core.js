@@ -289,20 +289,18 @@ function getProcess(packageOwner, packageName, key, options) {
 			if (options.terminal) {
 				imports.terminal = {
 					'print': process.terminal.print.bind(process.terminal),
-					'clear': process.terminal.clear.bind(process.terminal),
 					'readLine': process.terminal.readLine.bind(process.terminal),
-					'notify': process.terminal.notify.bind(process.terminal),
 					'setEcho': process.terminal.setEcho.bind(process.terminal),
-					'setTitle': process.terminal.setTitle.bind(process.terminal),
-					'setPrompt': process.terminal.setPrompt.bind(process.terminal),
-					'setPassword': process.terminal.setPassword.bind(process.terminal),
-					'setHash': process.terminal.setHash.bind(process.terminal),
-					'split': process.terminal.split.bind(process.terminal),
 					'select': process.terminal.select.bind(process.terminal),
-					'postMessageToIframe': process.terminal.postMessageToIframe.bind(process.terminal),
 					'cork': process.terminal.cork.bind(process.terminal),
 					'uncork': process.terminal.uncork.bind(process.terminal),
 				};
+				if (options.terminalApi) {
+					for (let i in options.terminalApi) {
+						let api = options.terminalApi[i];
+						imports.terminal[api[0]] = process.terminal.makeFunction(api);
+					}
+				}
 			}
 			if (manifest
 				&& manifest.permissions
@@ -416,6 +414,8 @@ httpd.all("", function(request, response) {
 		return terminal.handler(request, response, null, null, match[1]);
 	} else if (match = /^\/\~([^\/]+)\/([^\/]+)(.*)/.exec(request.uri)) {
 		return terminal.handler(request, response, match[1], match[2], match[3]);
+	} else if (request.uri == "/robots.txt") {
+		return terminal.handler(request, response, null, null, request.uri);
 	} else {
 		var data = "File not found.";
 		response.writeHead(404, {"Content-Type": "text/plain; charset=utf-8", "Content-Length": data.length.toString()});

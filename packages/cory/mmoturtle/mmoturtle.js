@@ -1,5 +1,7 @@
 "use strict";
 
+//! {"description": "Massively multiplayer online Turtle Graphics"}
+
 // This script runs server-side, once for each client session.
 
 if (imports.terminal) {
