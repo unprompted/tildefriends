@@ -189,14 +189,23 @@ function badName(name) {
 }
 
 function getManifest(fileName) {
-	var manifest = [];
-	var lines = File.readFile(fileName).split("\n").map(x => x.trimRight());
-	for (var i = 0; i < lines.length; i++) {
+	let manifest = [];
+	let lines = File.readFile(fileName).split("\n").map(x => x.trimRight());
+	for (let i = 0; i < lines.length; i++) {
 		if (lines[i].substring(0, 4) == "//! ") {
 			manifest.push(lines[i].substring(4));
 		}
 	}
-	return manifest.length ? JSON.parse(manifest.join("\n")) : null;
+	let result;
+	try {
+		if (manifest.length) {
+			result = JSON.parse(manifest.join("\n"));
+		}
+	} catch (error) {
+		print("ERROR: getManifest(" + fileName + "): ", error);
+		// Oh well.  No manifest.
+	}
+	return result;
 }
 
 function packageNameToPath(name) {
