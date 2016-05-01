@@ -1,5 +1,6 @@
 "use strict";
 
+var gSocket;
 var gSessionId;
 var gCredentials;
 var gErrorCount = 0;
@@ -215,9 +216,19 @@ function printStructured(container, data) {
 		} else if (data.image) {
 			node = document.createElement("img");
 			node.setAttribute("src", data.image);
+		} else if (data.input) {
+			node = document.createElement("input");
+			node.setAttribute("type", data.input);
+			if (data.name) {
+				node.name = data.name;
+			}
+			if (data.input == "submit") {
+				node.onclick = submitButton;
+			}
 		} else {
 			node = document.createElement("span");
 		}
+
 		if (data.style) {
 			node.setAttribute("style", data.style);
 		}
@@ -225,7 +236,9 @@ function printStructured(container, data) {
 			node.setAttribute("class", data.class);
 		}
 		var value = data.value || data.href || data.command || "";
-		if (!value && data.message && data.stackTrace) {
+		if (data.input) {
+			node.value = value;
+		} else if (!value && data.message && data.stackTrace) {
 			printStructured(node, data.message);
 			node.appendChild(document.createElement("br"));
 			printStructured(node, data.fileName + ":" + data.lineNumber + ":");
@@ -427,7 +440,17 @@ function onMessage(event) {
 	send({event: "onWindowMessage", message: event.data});
 }
 
-var gSocket;
+function submitButton() {
+	var inputs = document.getElementsByTagName("input");
+	var data = {};
+	for (var i in inputs) {
+		var input = inputs[i];
+		if (input.name) {
+			data[input.name] = input.value;
+		}
+	}
+	send({event: "submit", value: data});
+}
 
 window.addEventListener("load", function() {
 	if (window.Notification) {
