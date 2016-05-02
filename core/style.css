@@ -151,7 +151,7 @@ a:active, .command:active {
 	text-align: right;
 }
 
-#auth_or {
+.auth_or {
 	flex: 0 1 auto;
 	padding: 1em;
 }

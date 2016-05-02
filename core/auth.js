@@ -190,25 +190,25 @@ function authHandler(request, response) {
 				if (noAdministrator()) {
 					contents += '<div class="notice">There is currently no administrator.  You will be made administrator.</div>\n';
 				}
-				contents += '<div><label for="name">Name:</label> <input type="text" id="name" name="name" value=""></input></div>\n';
-				contents += '<div><label for="password">Password:</label> <input type="password" id="password" name="password" value=""></input></div>\n';
-				contents += '<div id="confirmPassword" style="display: none"><label for="confirm">Confirm:</label> <input type="password" id="confirm" name="confirm" value=""></input></div>\n';
-				contents += '<div><input type="checkbox" id="register" name="register" value="1" onchange="showHideConfirm()"></input> <label for="register">Register a new account</label></div>\n';
-				contents += '<div><input id="loginButton" type="submit" name="submit" value="Login"></input></div>\n';
+				contents += '<div><label for="name">Name:</label> <input type="text" id="name" name="name" value=""></div>\n';
+				contents += '<div><label for="password">Password:</label> <input type="password" id="password" name="password" value=""></div>\n';
+				contents += '<div id="confirmPassword" style="display: none"><label for="confirm">Confirm:</label> <input type="password" id="confirm" name="confirm" value=""></div>\n';
+				contents += '<div><input type="checkbox" id="register" name="register" value="1" onchange="showHideConfirm()"> <label for="register">Register a new account</label></div>\n';
+				contents += '<div><input id="loginButton" type="submit" name="submit" value="Login"></div>\n';
 				contents += '</div>';
-				contents += '<div id="auth_or"> - or - </div>';
+				contents += '<div class="auth_or"> - or - </div>';
 				if (gGlobalSettings && gGlobalSettings['google-signin-client_id']) {
 					contents += '<div class="g-signin2" data-onsuccess="onGoogleSignIn" data-scope="profile"></div>';
-					contents += '<div id="auth_or"> - or - </div>';
+					contents += '<div class="auth_or"> - or - </div>';
 				}
 				contents += '<div id="auth_guest">\n';
-				contents += '<input id="guestButton" type="submit" name="submit" value="Proceeed as Guest"></input>\n';
+				contents += '<input id="guestButton" type="submit" name="submit" value="Proceeed as Guest">\n';
 				contents += '</div>\n';
 				contents += '</div>\n';
 				contents += '</form>';
 			}
 			var text = html.replace("<!--SESSION-->", contents);
-			response.writeHead(200, {"Content-Type": "text/html; charset=utf-6", "Set-Cookie": cookie, "Content-Length": text.length});
+			response.writeHead(200, {"Content-Type": "text/html; charset=utf-8", "Set-Cookie": cookie, "Content-Length": text.length});
 			response.end(text);
 		}
 	} else if (request.uri == "/login/logout") {
