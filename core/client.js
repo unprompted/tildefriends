@@ -281,8 +281,10 @@ function setErrorMessage(message) {
 	while (node.firstChild) {
 		node.removeChild(node.firstChild);
 	}
-	node.appendChild(document.createTextNode(message));
-	node.setAttribute("style", "display: inline; color: #dc322f");
+	if (message) {
+		node.appendChild(document.createTextNode(message));
+		node.setAttribute("style", "display: inline; color: #dc322f");
+	}
 }
 
 function send(command) {
@@ -429,11 +431,17 @@ function hashChange() {
 }
 
 function focus() {
-	send({event: "focus"});
+	if (gSocket && gSocket.readyState == gSocket.CLOSED) {
+		connectSocket();
+	} else {
+		send({event: "focus"});
+	}
 }
 
 function blur() {
-	send({event: "blur"});
+	if (gSocket && gSocket.readyState == gSocket.OPEN) {
+		send({event: "blur"});
+	}
 }
 
 function onMessage(event) {
@@ -452,6 +460,39 @@ function submitButton() {
 	send({event: "submit", value: data});
 }
 
+function connectSocket() {
+	if (!gSocket || gSocket.readyState == gSocket.CLOSED) {
+		gSocket = new WebSocket(
+			(window.location.protocol == "https:" ? "wss://" : "ws://")
+			+ window.location.hostname
+			+ (window.location.port.length ? ":" + window.location.port : "")
+			+ "/terminal/socket");
+		gSocket.onopen = function() {
+			setErrorMessage(null);
+			gSocket.send(JSON.stringify({
+				action: "hello",
+				path: window.location.pathname,
+				terminalApi: [
+					['clear'],
+					['notify', 'title', 'options'],
+					['postMessageToIframe', 'name', 'message'],
+					['setHash', 'value'],
+					['setPassword', 'value'],
+					['setPrompt', 'value'],
+					['setTitle', 'value'],
+					['split', 'options'],
+				],
+			}));
+		}
+		gSocket.onmessage = function(event) {
+			receive(JSON.parse(event.data));
+		}
+		gSocket.onclose = function(event) {
+			setErrorMessage("Connection closed with code " + event.code);
+		}
+	}
+}
+
 window.addEventListener("load", function() {
 	if (window.Notification) {
 		Notification.requestPermission();
@@ -463,33 +504,7 @@ window.addEventListener("load", function() {
 	window.addEventListener("focus", focus);
 	window.addEventListener("blur", blur);
 	window.addEventListener("message", onMessage, false);
+	window.addEventListener("online", connectSocket);
 	enableDragDrop();
-
-	gSocket = new WebSocket(
-		(window.location.protocol == "https:" ? "wss://" : "ws://")
-		+ window.location.hostname
-		+ (window.location.port.length ? ":" + window.location.port : "")
-		+ "/terminal/socket");
-	gSocket.onopen = function() {
-		gSocket.send(JSON.stringify({
-			action: "hello",
-			path: window.location.pathname,
-			terminalApi: [
-				['clear'],
-				['notify', 'title', 'options'],
-				['postMessageToIframe', 'name', 'message'],
-				['setHash', 'value'],
-				['setPassword', 'value'],
-				['setPrompt', 'value'],
-				['setTitle', 'value'],
-				['split', 'options'],
-			],
-		}));
-	}
-	gSocket.onmessage = function(event) {
-		receive(JSON.parse(event.data));
-	}
-	gSocket.onclose = function(event) {
-		setErrorMessage("Connection closed with code " + event.code);
-	}
+	connectSocket();
 });

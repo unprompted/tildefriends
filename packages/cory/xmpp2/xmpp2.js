@@ -683,7 +683,7 @@ var gPingCount = 0;
 class XmppService {
 	constructor(options) {
 		let self = this;
-		self._callback = options.callback;
+		self._callbacks = [options.callback];
 		self._conversations = {};
 
 		network.newConnection().then(function(socket) {
@@ -716,6 +716,21 @@ class XmppService {
 		return result;
 	}
 
+	invokeCallback(message) {
+		let self = this;
+		for (let i = self._callbacks.length - 1; i >= 0; i--) {
+			let callback = self._callbacks[i];
+			try {
+				callback(message);
+			} catch (error) {
+				self._callbacks.splice(i, 1);
+
+				// XXX: Send it to the other connections?
+				print(error);
+			}
+		}
+	}
+
 	_connect(options) {
 		let self = this;
 		var kTrustedCertificate = "-----BEGIN CERTIFICATE-----\n" +
@@ -741,7 +756,7 @@ class XmppService {
 		let server = options.server;
 		self._socket.connect("jabber.troubleimpact.com", 5222).then(function() {
 			print("actually connected");
-			self._callback({action: "connected"});
+			self.invokeCallback({action: "connected"});
 			print("wtf");
 			var parse = new XmlStanzaParser(1);
 			self._socket.write("<?xml version='1.0'?>");
@@ -753,7 +768,7 @@ class XmppService {
 			self._socket.read(function(data) {
 				try {
 					if (!data) {
-						self._callback({action: "disconnected"});
+						self.invokeCallback({action: "disconnected"});
 						return;
 					}
 					parse.parse(data).forEach(function(stanza) {
@@ -786,10 +801,10 @@ class XmppService {
 								self._socket.write("<presence to='chadhappyfuntime@conference.jabber.troubleimpact.com/" + userName + "'><priority>1</priority><x xmlns='http://jabber.org/protocol/muc'/></presence>");
 								self._schedulePing();
 								self._conversations["chadhappyfuntime@conference.jabber.troubleimpact.com"] = {participants: [], history: []};
-							} else if (stanza.attributes.id == "ping" + gPingCount) {
+							} else if (stanza.children.length && stanza.children[0].name == "ping") {
 								// Ping response.
 							} else {
-								self._callback({
+								self.invokeCallback({
 									action: "unknown",
 									stanza: stanza,
 								});
@@ -797,7 +812,7 @@ class XmppService {
 						} else if (stanza.name == "message") {
 							let message = self._convertMessage(stanza);
 							self._conversations[message.conversation].history.push(message);
-							self._callback(message);
+							self.invokeCallback(message);
 						} else if (stanza.name == "challenge") {
 							var challenge = Base64.decode(stanza.text);
 							var parts = challenge.split(',');
@@ -835,21 +850,22 @@ class XmppService {
 							let name = stanza.attributes.from.split('/', 2)[1];
 							let conversation = stanza.attributes.from.split('/', 2)[0];
 							let leaving = stanza.attributes.type == "unavailable";
+							let index = self._conversations[conversation].participants.indexOf(name);
 							if (leaving) {
-								self._conversations[conversation].participants.remove(name);
+								self._conversations[conversation].participants.splice(index, 1);
 							} else {
-								if (self._conversations[conversation].participants.indexOf(name) == -1) {
+								if (index == -1) {
 									self._conversations[conversation].participants.push(name);
 								}
 							}
-							self._callback({
+							self.invokeCallback({
 								action: "presence",
 								name: name,
 								jid: stanza.attributes.from,
 								type: stanza.attributes.type,
 							});
 						} else {
-							self._callback({
+							self.invokeCallback({
 								action: "unknown",
 								stanza: stanza,
 							});
@@ -869,7 +885,7 @@ class XmppService {
 	}
 
 	_reportError(error) {
-		this._callback({
+		this.invokeCallback({
 			action: "error",
 			error: error,
 		}).catch(function(error) {
@@ -929,7 +945,9 @@ core.register("onMessage", function(sender, options) {
 		service = new XmppService(options);
 		gSessions[options.name] = service;
 	} else {
-		service._callback = options.callback;
+		if (service._callbacks.indexOf(options.callback) == -1) {
+			service._callbacks.push(options.callback);
+		}
 	}
 	return {
 		sendMessage: service.sendMessage.bind(service),

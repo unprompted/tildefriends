@@ -105,7 +105,7 @@ function configureAccount(id, updates) {
 				if (schema) {
 					for (var i in schema) {
 						let field = schema[i];
-						terminal.print({input: field.type, name: field.name, value: account[field.name] || field.default});
+						terminal.print({style: "font-weight: bold", value: field.name + ": "}, {input: field.type, name: field.name, value: account[field.name] || field.default});
 					}
 				}
 			}
@@ -154,7 +154,6 @@ function connect(id) {
 					session.conversations = {};
 					getConversation(session, {});
 					session.getConversations().then(function(conversations) {
-						print(conversations);
 						for (let j in conversations) {
 							getConversation(session, {conversation: conversations[j]});
 						}
@@ -207,7 +206,6 @@ function updateConversation() {
 			gCurrentConversation.session.getHistory(gCurrentConversation.name),
 			gCurrentConversation.session.getParticipants(gCurrentConversation.name),
 		]).then(function(data) {
-			print(data);
 			let history = data[0];
 			let participants = data[1];
 			gCurrentConversation.messages = history;
@@ -232,6 +230,7 @@ function updateUsers() {
 	terminal.clear();
 	terminal.print({style: "font-size: x-large", value: "Users"});
 	if (gCurrentConversation) {
+		gCurrentConversation.participants.sort();
 		for (var i in gCurrentConversation.participants) {
 			terminal.print(gCurrentConversation.participants[i]);
 		}
@@ -283,20 +282,41 @@ function getConversation(session, message) {
 }
 
 function chatCallback(event) {
-	print(event);
-	if (event.action == "message") {
-		let conversation = getConversation(this.session, event);
-		if (conversation == gCurrentConversation) {
-			printMessage(event);
-		}
-		conversation.messages.push(event);
+	try {
+		if (event.action == "message") {
+			let conversation = getConversation(this.session, event);
+			if (conversation == gCurrentConversation) {
+				printMessage(event);
+			}
+			conversation.messages.push(event);
 
-		if (!gFocus) {
-			gUnread++;
-			updateTitle();
+			if (!gFocus) {
+				gUnread++;
+				updateTitle();
+			}
+		} else if (event.action == "presence") {
+			let conversation = event.jid.split('/', 2)[0];
+			if (gCurrentConversation.name == conversation) {
+				let index = gCurrentConversation.participants.indexOf(event.name);
+				if (event.type == "unavailable") {
+					if (index != -1) {
+						gCurrentConversation.participants.splice(index, 1);
+						updateUsers();
+						terminal.print(new Date().toString(), ": ", event.name + " has left the room.");
+					}
+				} else {
+					if (index == -1) {
+						gCurrentConversation.participants.push(event.name);
+						updateUsers();
+						terminal.print(new Date().toString(), ": ", event.name + " has joined the room.");
+					}
+				}
+			}
+		} else {
+			terminal.print("Unhandled event: ", JSON.stringify(event));
 		}
-	} else {
-		terminal.print("Unhandled event: ", JSON.stringify(event));
+	} catch (error) {
+		terminal.print("chatCallback: ", error);
 	}
 };
 
