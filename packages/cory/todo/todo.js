@@ -64,13 +64,15 @@ core.register("onInput", function(command) {
 			activeList = makePrivateKey(command);
 			writeList(activeList, {name: command, items: []}).then(notifyChanged).then(redisplay);
 		}
-	} else if (command.hash) {
-		activeList = command.hash;
-		if (activeList.charAt(0) == "#") {
-			activeList = activeList.substring(1);
-		}
-		redisplay();
 	}
+});
+
+core.register("hashChange", function(event) {
+	activeList = event.hash;
+	if (activeList && activeList.charAt(0) == "#") {
+		activeList = activeList.substring(1);
+	}
+	redisplay();
 });
 
 core.register("onMessage", function(message) {
@@ -137,6 +139,8 @@ function removeItem(key, name) {
 }
 
 function printList(name, key, items) {
+	terminal.cork();
+	terminal.clear();
 	terminal.print(name,
 		" - ",
 		{command: "action:" + JSON.stringify({action: "setShowHidden", value: !showHidden}), value: showHidden ? "stop showing hidden" : "show hidden"},
@@ -170,9 +174,11 @@ function printList(name, key, items) {
 				")");
 		}
 	}
+	terminal.uncork();
 }
 
 function redisplay() {
+	terminal.cork();
 	terminal.clear();
 	terminal.setEcho(false);
 	if (activeList) {
@@ -184,6 +190,7 @@ function redisplay() {
 	} else {
 		printListOfLists();
 	}
+	terminal.uncork();
 }
 
 function makeId() {
@@ -239,8 +246,9 @@ function getVisibleLists() {
 }
 
 function printListOfLists() {
-	terminal.print("TODO Lists:");
 	getVisibleLists().then(function(keys) {
+		terminal.cork();
+		terminal.print("TODO Lists:");
 		for (var i = 0; i < keys.length; i++) {
 			let key = keys[i];
 			terminal.print({
@@ -248,6 +256,7 @@ function printListOfLists() {
 				value: getName(key),
 			}, " ", isPrivate(key) ? "(private)" : "(public)");
 		}
+		terminal.uncork();
 	});
 }
 
