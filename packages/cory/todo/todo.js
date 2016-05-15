@@ -5,6 +5,7 @@ var kChecked = "☑";
 
 let activeList = null;
 let confirmRemove;
+let showHidden = false;
 
 terminal.setPrompt("Add Item>");
 
@@ -16,6 +17,22 @@ core.register("onInput", function(command) {
 		}
 		if (command.action == "set") {
 			setItem(command.key, command.item, command.value).then(notifyChanged).then(redisplay);
+		} else if (command.action == "setHidden") {
+			setItemHidden(command.key, command.item, command.hidden).then(notifyChanged).then(redisplay);
+		} else if (command.action == "setShowHidden") {
+			showHidden = !showHidden;
+			redisplay();
+		} else if (command.action == "makePublic") {
+			let key = JSON.parse(command.key);
+			delete key.user;
+			key.public = true;
+			let newKey = JSON.stringify(key);
+			readList(command.key).then(function(data) {
+				return writeList(newKey, data);
+			}).then(function() {
+				activeList = newKey;
+				return database.remove(command.key);
+			}).then(redisplay);
 		} else if (command.action == "remove") {
 			confirmRemove = command;
 			redisplay();
@@ -99,6 +116,17 @@ function setItem(key, name, value) {
 	});
 }
 
+function setItemHidden(key, name, hidden) {
+	return readList(key).then(function(todo) {
+		for (var i = 0; i < todo.items.length; i++) {
+			if (todo.items[i].name == name) {
+				todo.items[i].hidden = hidden;
+			}
+		}
+		return writeList(key, todo);
+	});
+}
+
 function removeItem(key, name) {
 	return readList(key).then(function(todo) {
 		todo.items = todo.items.filter(function(item) {
@@ -111,23 +139,36 @@ function removeItem(key, name) {
 function printList(name, key, items) {
 	terminal.print(name,
 		" - ",
+		{command: "action:" + JSON.stringify({action: "setShowHidden", value: !showHidden}), value: showHidden ? "stop showing hidden" : "show hidden"},
+		" - ",
 		{command: "action:" + JSON.stringify({action: "lists"}), value: "back"},
 		" - ",
-		{command: "action:" + JSON.stringify({action: (confirmRemove === true ? "reallyRemoveList" : "removeList"), key: key}), value: (confirmRemove === true ? "confirm remove" : "remove")});
+		{command: "action:" + JSON.stringify({action: (confirmRemove === true ? "reallyRemoveList" : "removeList"), key: key}), value: (confirmRemove === true ? "confirm remove" : "remove list")},
+		JSON.parse(key).public ? "" : [" - ", {command: "action:" + JSON.stringify({action: "makePublic", key: key}), value: "make public"}]);
 	terminal.print("=".repeat(name.length));
 	for (var i = 0; i < items.length; i++) {
-		var isChecked = items[i].value;
-		var style = ["", "text-decoration: line-through"];
-		terminal.print(
-			{command: "action:" + JSON.stringify({action: "set", key: key, item: items[i].name, value: !isChecked}), value: isChecked ? kChecked : kUnchecked},
-			" ",
-			{style: style[isChecked ? 1 : 0], value: items[i].name},
-			" (",
-			{command: "action:" + JSON.stringify({
-				action: (confirmRemove && confirmRemove.item == items[i].name ? "reallyRemove" : "remove"),
-				key: key,
-				item: items[i].name}), value: (confirmRemove && confirmRemove.item == items[i].name ? "confirm remove" : "remove")},
-			")");
+		var visible = !items[i].hidden;
+		if (showHidden || visible) {
+			var isChecked = items[i].value;
+			var style = ["", "text-decoration: line-through"];
+			terminal.print(
+				{command: "action:" + JSON.stringify({action: "set", key: key, item: items[i].name, value: !isChecked}), value: isChecked ? kChecked : kUnchecked},
+				" ",
+				{style: style[isChecked ? 1 : 0], value: items[i].name},
+				" (",
+				{command: "action:" + JSON.stringify({
+					action: "setHidden",
+					key: key,
+					item: items[i].name,
+					hidden: visible,
+				}), value: visible ? "hide" : "unhide"},
+				" ",
+				{command: "action:" + JSON.stringify({
+					action: (confirmRemove && confirmRemove.item == items[i].name ? "reallyRemove" : "remove"),
+					key: key,
+					item: items[i].name}), value: (confirmRemove && confirmRemove.item == items[i].name ? "confirm remove" : "remove")},
+				")");
+		}
 	}
 }
 
@@ -166,7 +207,7 @@ function hasPermission(key) {
 	let result = false;
 	try {
 		let data = JSON.parse(key);
-		result = data.public || data.user == core.user.name;
+		result = data.public || data.user == core.user.name || !data.user;
 	} catch (error) {
 		result = true;
 	}
@@ -180,6 +221,15 @@ function getName(key) {
 	} catch (error) {
 	}
 	return name;
+}
+
+function isPrivate(key) {
+	let isPrivate = false;
+	try {
+		isPrivate = !JSON.parse(key).public;
+	} catch (error) {
+	}
+	return isPrivate;
 }
 
 function getVisibleLists() {
@@ -196,7 +246,7 @@ function printListOfLists() {
 			terminal.print({
 				command: "action:" + JSON.stringify({action: "editList", key: key}),
 				value: getName(key),
-			});
+			}, " ", isPrivate(key) ? "(private)" : "(public)");
 		}
 	});
 }
