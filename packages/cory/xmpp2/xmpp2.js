@@ -12,7 +12,10 @@
 //! 			{"name": "resource", "type": "text", "default": "tildefriends"},
 //! 			{"name": "server", "type": "text"}
 //! 		]
-//! 	}
+//! 	},
+//! 	"require": [
+//! 		"libchat"
+//! 	]
 //! }
 
 // md5.js
@@ -678,57 +681,23 @@ XmlStanzaParser.prototype.parseNode = function(node) {
 
 // end xmpp.js
 
+let ChatService = require("libchat").ChatService;
+
 var gPingCount = 0;
 
 class XmppService {
 	constructor(options) {
 		let self = this;
-		self._callbacks = [options.callback];
-		self._conversations = {};
+		self._service = new ChatService(options.callback);
 
 		network.newConnection().then(function(socket) {
 			self._socket = socket;
 			return self._connect(options);
-		}).catch(self._reportError);
+		}).catch(self._service.reportError);
 	}
 
 	sendMessage(to, message) {
-		this._socket.write("<message type='groupchat' to='" + xmlEncode(to) + "'><body>" + xmlEncode(message) + "</body></message>");
-	}
-
-	getConversations() {
-		return Object.keys(this._conversations);
-	}
-
-	getParticipants(conversation) {
-		let result;
-		if (this._conversations[conversation]) {
-			result = this._conversations[conversation].participants;
-		}
-		return result;
-	}
-
-	getHistory(conversation) {
-		let result;
-		if (this._conversations[conversation]) {
-			result = this._conversations[conversation].history;
-		}
-		return result;
-	}
-
-	invokeCallback(message) {
-		let self = this;
-		for (let i = self._callbacks.length - 1; i >= 0; i--) {
-			let callback = self._callbacks[i];
-			try {
-				callback(message);
-			} catch (error) {
-				self._callbacks.splice(i, 1);
-
-				// XXX: Send it to the other connections?
-				print(error);
-			}
-		}
+		this._socket.write("<message type='groupchat' to='" + xmlEncode(to) + "'><body>" + xmlEncode(message) + "</body></message>").catch(this._service.reportError);
 	}
 
 	_connect(options) {
@@ -755,9 +724,7 @@ class XmppService {
 		let password = options.password;
 		let server = options.server;
 		self._socket.connect("jabber.troubleimpact.com", 5222).then(function() {
-			print("actually connected");
-			self.invokeCallback({action: "connected"});
-			print("wtf");
+			self._service.notifyStateChanged("connected");
 			var parse = new XmlStanzaParser(1);
 			self._socket.write("<?xml version='1.0'?>");
 			self._socket.write("<stream:stream to='" + xmlEncode(server) + "' xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams' version='1.0'>");
@@ -768,7 +735,7 @@ class XmppService {
 			self._socket.read(function(data) {
 				try {
 					if (!data) {
-						self.invokeCallback({action: "disconnected"});
+						self._service.notifyStateChanged("disconnected");
 						return;
 					}
 					parse.parse(data).forEach(function(stanza) {
@@ -800,19 +767,26 @@ class XmppService {
 							} else if (stanza.attributes.id == "session0") {
 								self._socket.write("<presence to='chadhappyfuntime@conference.jabber.troubleimpact.com/" + userName + "'><priority>1</priority><x xmlns='http://jabber.org/protocol/muc'/></presence>");
 								self._schedulePing();
-								self._conversations["chadhappyfuntime@conference.jabber.troubleimpact.com"] = {participants: [], history: []};
+								//self._conversations["chadhappyfuntime@conference.jabber.troubleimpact.com"] = {participants: [], history: []};
 							} else if (stanza.children.length && stanza.children[0].name == "ping") {
 								// Ping response.
 							} else {
-								self.invokeCallback({
-									action: "unknown",
-									stanza: stanza,
-								});
+								self._service.notifyMessageReceived(null, {unknown: stanza});
 							}
 						} else if (stanza.name == "message") {
 							let message = self._convertMessage(stanza);
-							self._conversations[message.conversation].history.push(message);
-							self.invokeCallback(message);
+							let conversation = stanza.attributes.from;
+							if (conversation && conversation.indexOf('/') != -1) {
+								conversation = conversation.split("/")[1];
+							}
+							if (stanza.attributes.type == "groupchat") {
+								if (self._service.isConversation(stanza.attributes.to.split("/")[0])) {
+									conversation = stanza.attributes.to.split("/")[0];
+								} else if (self._service.isConversation(stanza.attributes.from.split("/")[0])) {
+									conversation = stanza.attributes.from.split("/")[0];
+								}
+							}
+							self._service.notifyMessageReceived(conversation, message);
 						} else if (stanza.name == "challenge") {
 							var challenge = Base64.decode(stanza.text);
 							var parts = challenge.split(',');
@@ -849,48 +823,22 @@ class XmppService {
 						} else if (stanza.name == "presence") {
 							let name = stanza.attributes.from.split('/', 2)[1];
 							let conversation = stanza.attributes.from.split('/', 2)[0];
-							let leaving = stanza.attributes.type == "unavailable";
-							let index = self._conversations[conversation].participants.indexOf(name);
-							if (leaving) {
-								self._conversations[conversation].participants.splice(index, 1);
-							} else {
-								if (index == -1) {
-									self._conversations[conversation].participants.push(name);
-								}
-							}
-							self.invokeCallback({
-								action: "presence",
-								name: name,
-								jid: stanza.attributes.from,
-								type: stanza.attributes.type,
-							});
+							self._service.notifyPresenceChanged(conversation, name, stanza.attributes.type);
 						} else {
-							self.invokeCallback({
-								action: "unknown",
-								stanza: stanza,
-							});
+							self._service.notifyMessageReceived(null, {unknown: stanza});
 						}
 					});
 				} catch (error) {
-					self._reportError(error);
+					self._service.reportError(error);
 				}
 			});
-		}).catch(self._reportError);
+		}).catch(self._service.reportError);
 	}
 
 	disconnect() {
 		self._socket.write("</stream>");
 		self._socket.close();
 		delete gSessions[self._name];
-	}
-
-	_reportError(error) {
-		this.invokeCallback({
-			action: "error",
-			error: error,
-		}).catch(function(error) {
-			print(error);
-		});
 	}
 
 	_convertMessage(stanza) {
@@ -909,18 +857,8 @@ class XmppService {
 		if (from && from.indexOf('/') != -1) {
 			from = from.split("/")[1];
 		}
-		let conversation = from;
-		if (stanza.attributes.type == "groupchat") {
-			if (self._conversations[stanza.attributes.to.split("/")[0]]) {
-				conversation = stanza.attributes.to.split("/")[0];
-			} else if (self._conversations[stanza.attributes.from.split("/")[0]]) {
-				conversation = stanza.attributes.from.split("/")[0];
-			}
-		}
 		let message = {
-			action: "message",
 			from: from,
-			conversation: conversation,
 			message: text,
 			stanza: stanza,
 			timestamp: now,
@@ -937,23 +875,4 @@ class XmppService {
 	}
 };
 
-let gSessions = {};
-
-core.register("onMessage", function(sender, options) {
-	let service = gSessions[options.name];
-	if (!service) {
-		service = new XmppService(options);
-		gSessions[options.name] = service;
-	} else {
-		if (service._callbacks.indexOf(options.callback) == -1) {
-			service._callbacks.push(options.callback);
-		}
-	}
-	return {
-		sendMessage: service.sendMessage.bind(service),
-		getConversations: service.getConversations.bind(service),
-		getHistory: service.getHistory.bind(service),
-		getParticipants: service.getParticipants.bind(service),
-		disconnect: service.disconnect.bind(service),
-	};
-});
+ChatService.handleMessages(XmppService);

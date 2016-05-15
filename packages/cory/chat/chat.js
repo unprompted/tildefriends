@@ -4,6 +4,7 @@ var gFocus = true;
 var gUnread = 0;
 var gPresence = {};
 let gSessions = {};
+let gState = {};
 let gCurrentConversation;
 
 function updateTitle() {
@@ -11,6 +12,7 @@ function updateTitle() {
 }
 
 let kAccountsKey = JSON.stringify(["accounts", core.user.name]);
+let kStateKey = JSON.stringify(["state", core.user.name]);
 
 function runCommand(data) {
 	if (data.action == "addAccount") {
@@ -27,10 +29,16 @@ function runCommand(data) {
 	} else if (data.action == "disconnect") {
 		disconnect(data.id);
 	} else if (data.action == "window") {
-		gCurrentConversation = gSessions[data.account].conversations[data.conversation];
-		updateConversation();
-		updateWindows();
+		setWindow(data.account, data.conversation);
 	}
+}
+
+function setWindow(accountId, conversation) {
+	gState.window = {account: accountId, conversation: conversation};
+	database.set(kStateKey, JSON.stringify(gState));
+	gCurrentConversation = gSessions[accountId].conversations[conversation];
+	updateConversation();
+	updateWindows();
 }
 
 function addAccount() {
@@ -152,10 +160,11 @@ function connect(id) {
 					self.session = session;
 					gSessions[id] = session;
 					session.conversations = {};
-					getConversation(session, {});
+					session.account = account;
+					getConversation(session, null);
 					session.getConversations().then(function(conversations) {
 						for (let j in conversations) {
-							getConversation(session, {conversation: conversations[j]});
+							getConversation(session, conversations[j]);
 						}
 					});
 				});
@@ -208,13 +217,18 @@ function updateConversation() {
 		]).then(function(data) {
 			let history = data[0];
 			let participants = data[1];
-			gCurrentConversation.messages = history;
-			gCurrentConversation.participants = participants;
+			gCurrentConversation.messages = history || [];
+			gCurrentConversation.participants = participants || [];
 			terminal.cork();
 			terminal.select("terminal");
 			terminal.clear();
 			for (var i in gCurrentConversation.messages) {
-				printMessage(gCurrentConversation.messages[i]);
+				let message = gCurrentConversation.messages[i];
+				if (message.action == "message") {
+					printMessage(message.message);
+				} else {
+					terminal.print(message);
+				}
 			}
 			updateUsers();
 			terminal.uncork();
@@ -255,65 +269,81 @@ terminal.select("terminal");
 terminal.print("~Friends Chat");
 terminal.uncork();
 
-function getConversation(session, message) {
+function getConversation(session, conversationName) {
 	let result;
-	for (var i in gSessions) {
-		if (session == gSessions[i]) {
-			let key = message.conversation || message.from || "";
-			if (!session.conversations[key]) {
-				session.conversations[key] = {
-					session: session,
-					name: key,
-					messages: [],
-					sendMessage: function(message) {
-						return session.sendMessage(key, message);
-					},
-				};
-				updateWindows();
+	let key = conversationName || "";
+	if (!session.conversations) {
+		session.conversations = {};
+	}
+	if (!session.conversations[key]) {
+		session.conversations[key] = {
+			session: session,
+			name: key,
+			messages: [],
+			sendMessage: function(message) {
+				return session.sendMessage(key, message);
+			},
+		};
+		updateWindows();
+	}
+	result = session.conversations[key];
+	if (result) {
+		if (!gCurrentConversation) {
+			if (!gState.window) {
+				setWindow(session.account.id, key);
+			} else if (gState.window.account = session.account.id && gState.window.conversation == key) {
+				setWindow(session.account.id, key);
 			}
-			result = session.conversations[key];
-			break;
 		}
 	}
-	if (result && !gCurrentConversation) {
-		gCurrentConversation = result;
-	}
 	return result;
+}
+
+function printToConversation(conversation, message, notify) {
+	if (conversation == gCurrentConversation) {
+		if (message.action == "message") {
+			printMessage(message.message);
+		} else {
+			terminal.print(message);
+		}
+	}
+	if (conversation) {
+		conversation.messages.push(message);
+	}
+	if (notify && !gFocus) {
+		gUnread++;
+		updateTitle();
+	}
 }
 
 function chatCallback(event) {
 	try {
 		if (event.action == "message") {
-			let conversation = getConversation(this.session, event);
-			if (conversation == gCurrentConversation) {
-				printMessage(event);
-			}
-			conversation.messages.push(event);
-
-			if (!gFocus) {
-				gUnread++;
-				updateTitle();
-			}
+			let conversation = getConversation(this.session, event.conversation);
+			printToConversation(conversation, event);
 		} else if (event.action == "presence") {
-			let conversation = event.jid.split('/', 2)[0];
-			if (gCurrentConversation.name == conversation) {
-				let index = gCurrentConversation.participants.indexOf(event.name);
-				if (event.type == "unavailable") {
-					if (index != -1) {
-						gCurrentConversation.participants.splice(index, 1);
+			let conversation = getConversation(this.session, event.conversation);
+			let index = conversation.participants.indexOf(event.user);
+			if (event.presence == "unavailable") {
+				if (index != -1) {
+					conversation.participants.splice(index, 1);
+					if (conversation == gCurrentConversation) {
 						updateUsers();
-						terminal.print(new Date().toString(), ": ", event.name + " has left the room.");
 					}
-				} else {
-					if (index == -1) {
-						gCurrentConversation.participants.push(event.name);
+					printToConversation(conversation, [new Date().toString(), ": ", event.user + " has left the room."]);
+				}
+			} else {
+				if (index == -1) {
+					conversation.participants.push(event.user);
+					if (conversation == gCurrentConversation) {
 						updateUsers();
-						terminal.print(new Date().toString(), ": ", event.name + " has joined the room.");
 					}
+					printToConversation(conversation, [new Date().toString(), ": ", event.user + " has joined the room."]);
 				}
 			}
 		} else {
-			terminal.print("Unhandled event: ", JSON.stringify(event));
+			let conversation = getConversation(this.session, event.conversation);
+			printToConversation(conversation, ["Unhandled event: ", JSON.stringify(event)]);
 		}
 	} catch (error) {
 		terminal.print("chatCallback: ", error);
@@ -391,8 +421,9 @@ core.register("blur", function() {
 });
 
 // Connect all accounts on start.
-Promise.all([database.get(kAccountsKey), core.getPackages()]).then(function(results) {
+Promise.all([database.get(kAccountsKey), database.get(kStateKey)]).then(function(results) {
 	let accounts = results[0] ? JSON.parse(results[0]) : [];
+	gState = results[1] ? JSON.parse(results[1]) : gState;
 	for (let i in accounts) {
 		connect(accounts[i].id);
 	}
