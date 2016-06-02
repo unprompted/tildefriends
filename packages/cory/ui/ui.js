@@ -1,5 +1,7 @@
 "use strict";
 
+//! {"category": "libraries"}
+
 function fileList(settings) {
 	let prefix = settings.prefix || "";
 

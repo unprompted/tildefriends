@@ -1,5 +1,7 @@
 "use strict";
 
+//! {"category": "work in progress"}
+
 class Log {
 	constructor(name, capacity) {
 		this._name = name;

@@ -1,6 +1,6 @@
 "use strict";
 
-//! {"permissions": ["network"]}
+//! {"category": "libraries", "permissions": ["network"]}
 
 terminal.print("Hello, world!");
 
