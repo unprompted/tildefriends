@@ -29,6 +29,7 @@ class IrcService {
 		self._service = new ChatService(options.callback);
 		self._name = options.name;
 		self._nick = options.nick;
+		self._nameReplies = {};
 
 		network.newConnection().then(function(socket) {
 			self._socket = socket;
@@ -66,7 +67,7 @@ class IrcService {
 				// Is it a channel type?
 				if ("&#!+.".indexOf(parts[1].charAt(0)) != -1) {
 					conversation = parts[1];
-				} else {
+				} else if (prefix.indexOf('!') != -1) {
 					conversation = prefix.split('!')[0];
 				}
 				this._service.notifyMessageReceived(conversation, {
@@ -81,10 +82,29 @@ class IrcService {
 				let person = prefix.split('!')[0];
 				let conversation = parts[1];
 				this._service.notifyPresenceChanged(conversation, person, "present");
-			} else if (parts[0] == "JOIN") {
+			} else if (parts[0] == "PART") {
 				let person = prefix.split('!')[0];
 				let conversation = parts[1];
 				this._service.notifyPresenceChanged(conversation, person, "unavailable");
+			} else if (parts[0] == "353") { // RPL_NAMREPLY
+				if (!this._nameReplies[parts[3]]) {
+					this._nameReplies[parts[3]] = [];
+				}
+				let users = parts[4].split(' ');
+				for (let i in users) {
+					let user = users[i];
+					let state = "present";
+					if ("@+".indexOf(user.charAt(0)) != -1) {
+						state = user.charAt(0);
+						user = user.substring(1);
+					}
+					this._nameReplies[parts[3]][user] = state;
+				}
+			} else if (parts[0] == "366") { // RPL_ENDOFNAMES
+				for (let conversation in this._nameReplies) {
+					this._service.notifyParticipantList(conversation, this._nameReplies[conversation]);
+				}
+				this._nameReplies = {};
 			} else {
 				this._service.notifyMessageReceived("", {from: prefix, message: lineNoPrefix});
 			}
@@ -127,7 +147,7 @@ class IrcService {
 		} else {
 			this._socket.write("PRIVMSG " + target + " :" + text + "\r\n");
 		}
-		this._service.notifyMessageReceived(target || "", {from: self._nick, message: text, timestamp: new Date().toString()});
+		this._service.notifyMessageReceived(target || "", {from: this._nick, message: text, timestamp: new Date().toString()});
 	}
 
 	disconnect() {

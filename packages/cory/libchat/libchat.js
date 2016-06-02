@@ -86,6 +86,18 @@ exports.ChatService = class {
 		});
 	}
 
+	notifyParticipantList(conversation, participants) {
+		let current = this._getConversation(conversation).participants;
+		for (let i in current) {
+			if (!participants[i]) {
+				this.notifyPresenceChanged(conversation, i, "unavailable");
+			}
+		}
+		for (let i in participants) {
+			this.notifyPresenceChanged(conversation, i, participants[i]);
+		}
+	}
+
 	notifyStateChanged(state) {
 		this._state = state;
 		this._invokeCallback({action: state});

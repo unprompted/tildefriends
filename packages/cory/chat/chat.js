@@ -11,6 +11,7 @@ function updateTitle() {
 	terminal.setTitle((gUnread ? "(" + gUnread.toString() + ") " : "") + "Chat");
 }
 
+let kMaxHistory = 32;
 let kAccountsKey = JSON.stringify(["accounts", core.user.name]);
 let kStateKey = JSON.stringify(["state", core.user.name]);
 
@@ -218,6 +219,9 @@ function updateConversation() {
 			let history = data[0];
 			let participants = data[1];
 			gCurrentConversation.messages = history || [];
+			if (gCurrentConversation.messages.length > kMaxHistory) {
+				gCurrentConversation.messages.splice(0, gCurrentConversation.messages.length - kMaxHistory);
+			}
 			gCurrentConversation.participants = participants || [];
 			terminal.cork();
 			terminal.select("terminal");
@@ -227,7 +231,7 @@ function updateConversation() {
 				if (message.action == "message") {
 					printMessage(message.message);
 				} else {
-					terminal.print(message);
+					terminal.print(message.message);
 				}
 			}
 			updateUsers();
@@ -283,6 +287,7 @@ function getConversation(session, conversationName) {
 			sendMessage: function(message) {
 				return session.sendMessage(key, message);
 			},
+			participants: [],
 		};
 		updateWindows();
 	}

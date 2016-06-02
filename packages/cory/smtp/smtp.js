@@ -4,7 +4,7 @@
 
 terminal.print("Hello, world!");
 
-let kServer = "rowlf.unprompted.com";
+let kServer = "localhost";
 
 class Smtp {
 	constructor() {
@@ -29,7 +29,7 @@ class Smtp {
 						reject(error.message);
 					}
 				});
-				socket.connect("localhost", 25).catch(reject);
+				socket.connect(kServer, 25).catch(reject);
 			});
 		});
 	}

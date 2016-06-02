@@ -65,7 +65,7 @@ function index() {
 			}
 			terminal.print(
 				"* ",
-				{href: "/~" + app.owner + "/" + app.name},
+				{href: "/~" + app.owner + "/" + app.name, target: "_self"},
 				message,
 				app.manifest && app.manifest.description ? " - " + app.manifest.description.toString() : "");
 		});

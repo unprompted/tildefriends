@@ -5,6 +5,7 @@ var gSessionId;
 var gCredentials;
 var gErrorCount = 0;
 var gCommandHistory = [];
+var gSendKeyEvents = false;
 
 var kMaxCommandHistory = 16;
 
@@ -85,7 +86,8 @@ function split(container, children) {
 				var grow = children[i].grow || "1";
 				var shrink = children[i].shrink || "1";
 				var basis = children[i].basis || "auto";
-				node.setAttribute("style", "flex: " + grow + " " + shrink + " " + basis);
+				var style = children[i].style || "";
+				node.setAttribute("style", style + "; flex: " + grow + " " + shrink + " " + basis);
 
 				var classes = ["terminal"];
 				if (children[i].type == "vertical") {
@@ -156,10 +158,34 @@ function receive(data) {
 			if (iframe) {
 				iframe.contentWindow.postMessage(line[0].message, "*");
 			}
+		} else if (line && line[0] && line[0].action == "setSendKeyEvents") {
+			var value = line[0].value;
+			if (value && !gSendKeyEvents) {
+				window.addEventListener("keydown", keyEvent);
+				window.addEventListener("keypress", keyEvent);
+				window.addEventListener("keyup", keyEvent);
+			} else if (!value && gSendKeyEvents) {
+				window.removeEventListener("keydown", keyEvent);
+				window.removeEventListener("keypress", keyEvent);
+				window.removeEventListener("keyup", keyEvent);
+			}
+			gSendKeyEvents = value;
 		} else {
 			print(document.getElementById(target), line);
 		}
 	}
+}
+
+function keyEvent(event) {
+	send({
+		event: "key",
+		type: event.type,
+		which: event.which,
+		keyCode: event.keyCode,
+		charCode: event.charCode,
+		character: String.fromCharCode(event.keyCode || event.which),
+
+	});
 }
 
 function autoNewLine(terminal) {
@@ -173,13 +199,18 @@ function print(terminal, data) {
 }
 
 function printSvg(container, data, name, namespace) {
-	var node = document.createElementNS("http://www.w3.org/2000/svg", name);
-	for (var i in data.attributes) {
-		node.setAttribute(i, data.attributes[i]);
-	}
-	if (data.children) {
-		for (var i in data.children) {
-			node.appendChild(printSvg(node, data.children[i], data.children[i].name));
+	var node;
+	if (typeof data == "string") {
+		node = document.createTextNode(data);
+	} else {
+		node = document.createElementNS("http://www.w3.org/2000/svg", name);
+		for (var i in data.attributes) {
+			node.setAttribute(i, data.attributes[i]);
+		}
+		if (data.children) {
+			for (var i in data.children) {
+				node.appendChild(printSvg(node, data.children[i], data.children[i].name));
+			}
 		}
 	}
 	return node;
@@ -201,7 +232,7 @@ function printStructured(container, data) {
 		if (data.href) {
 			node = document.createElement("a");
 			node.setAttribute("href", data.href);
-			node.setAttribute("target", "_blank");
+			node.setAttribute("target", data.target || "_blank");
 		} else if (data.iframe) {
 			node = document.createElement("iframe");
 			node.setAttribute("srcdoc", data.iframe);
@@ -481,6 +512,7 @@ function connectSocket() {
 					['setPrompt', 'value'],
 					['setTitle', 'value'],
 					['split', 'options'],
+					['setSendKeyEvents', 'value'],
 				],
 			}));
 		}

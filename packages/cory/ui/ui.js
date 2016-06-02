@@ -1,16 +1,6 @@
 "use strict";
 
 function fileList(settings) {
-
-	terminal.setEcho(false);
-	terminal.clear();
-	terminal.print(settings.title);
-	if (core.user.credentials
-		&& core.user.credentials.permissions
-		&& core.user.credentials.permissions.authenticated) {
-		terminal.print({command: "new"});
-	}
-
 	let prefix = settings.prefix || "";
 
 	let makeSaveCallback = function(oldName, oldValue) {
@@ -39,6 +29,16 @@ function fileList(settings) {
 	core.register("hashChange", hashChange);
 
 	return database.getAll().then(function(entries) {
+		terminal.cork();
+		terminal.setEcho(false);
+		terminal.clear();
+		terminal.print(settings.title);
+		if (core.user.credentials
+			&& core.user.credentials.permissions
+			&& core.user.credentials.permissions.authenticated) {
+			terminal.print({command: "new"});
+		}
+
 		terminal.readLine().then(function(input) {
 			if (input == "new") {
 				terminal.setHash(name);
@@ -97,6 +97,7 @@ function fileList(settings) {
 				}
 			}
 		}
+		terminal.uncork();
 	});
 }
 
