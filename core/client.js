@@ -184,6 +184,7 @@ function keyEvent(event) {
 		keyCode: event.keyCode,
 		charCode: event.charCode,
 		character: String.fromCharCode(event.keyCode || event.which),
+		altKey: event.altKey,
 
 	});
 }

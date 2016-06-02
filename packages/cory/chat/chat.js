@@ -42,6 +42,27 @@ function setWindow(accountId, conversation) {
 	updateWindows();
 }
 
+function cycleConversation(delta) {
+	let allConversations = [];
+	let index = -1;
+	for (let i in gSessions) {
+		for (let j in gSessions[i].conversations) {
+			if (gCurrentConversation == gSessions[i].conversations[j]) {
+				index = allConversations.length;
+			}
+			allConversations.push([i, j]);
+		}
+	}
+	index += delta;
+	while (index < 0) {
+		index += allConversations.length;
+	}
+	while (index >= allConversations.length) {
+		index -= allConversations.length;
+	}
+	setWindow(allConversations[index][0], allConversations[index][1]);
+}
+
 function addAccount() {
 	return database.get(kAccountsKey).then(function(data) {
 		let accounts = data ? JSON.parse(data) : [];
@@ -424,6 +445,19 @@ core.register("focus", function() {
 core.register("blur", function() {
 	gFocus = false;
 });
+
+core.register("key", function(event) {
+	if (event.type == "keydown") {
+		if (event.altKey) {
+			if (event.character == "I") {
+				cycleConversation(-1);
+			} else if (event.character == "K") {
+				cycleConversation(1);
+			}
+		}
+	}
+});
+terminal.setSendKeyEvents(true);
 
 // Connect all accounts on start.
 Promise.all([database.get(kAccountsKey), database.get(kStateKey)]).then(function(results) {
