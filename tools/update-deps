@@ -18,7 +18,7 @@ if not os.path.isdir(kWork):
 os.chdir(kWork)
 
 kUvRepository = 'https://github.com/libuv/libuv.git'
-kUvBranch = 'v1.0.0'
+kUvBranch = 'v1.9.1'
 kUvWork = 'uv'
 
 kV8Repository = 'https://github.com/v8/v8.git'
