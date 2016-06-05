@@ -23,7 +23,7 @@ kUvBranch = 'v1.9.1'
 kUvWork = 'uv'
 
 kV8Repository = 'https://github.com/v8/v8.git'
-kV8Branch = 'branch-heads/5.0'
+kV8Branch = 'branch-heads/5.1'
 kV8Work = 'v8'
 
 def run(*args, **kw):
@@ -104,7 +104,6 @@ def updateV8():
 		run(['fetch' + extension, 'v8'])
 
 	win32Env = os.environ.copy()
-	win32Env['GYP_MSVS_VERSION'] = '2013'
 	win32Env['DEPOT_TOOLS_WIN_TOOLCHAIN'] = '0'
 
 	open(os.path.join(kV8Work, '.update-deps-branch'), 'w').write(kV8Branch)
