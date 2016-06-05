@@ -31,21 +31,6 @@ function enter(event) {
 			input.value = gCommandHistory.shift();
 			event.preventDefault();
 		}
-	} else if (event.keyCode == 186
-		&& !event.metaKey
-		&& !event.altKey
-		&& !event.ctrlKey
-		&& !event.shiftKey) {
-		var input = document.getElementById("input");
-		var value = input.value;
-		if (value && value[value.length - 1] == '\\') {
-			input.value = value.substring(0, value.length - 1) + ";";
-			event.preventDefault();
-		} else {
-			storeTarget(value);
-			input.value = "";
-			event.preventDefault();
-		}
 	}
 }
 
@@ -66,10 +51,6 @@ function url() {
 
 function hash() {
 	return window.location.hash != "#" ? window.location.hash : "";
-}
-
-function storeTarget(target) {
-	document.getElementById("target").innerText = target || "";
 }
 
 function split(container, children) {
@@ -322,9 +303,7 @@ function setErrorMessage(message) {
 function send(command) {
 	var value = command;
 	if (!command) {
-		var target = document.getElementById("target").innerText;
-		var prefix = target ? target + " " : "";
-		value = prefix + document.getElementById("input").value;
+		value = document.getElementById("input").value;
 		document.getElementById("input").value = "";
 	}
 	try {
