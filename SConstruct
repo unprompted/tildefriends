@@ -45,7 +45,7 @@ elif sys.platform == 'darwin':
 		os.path.join(uv, 'build/Release'),
 	])
 else:
-	env.Append(LIBS=['v8_base', 'v8_libbase', 'v8_libplatform', 'v8_nosnapshot', 'icui18n', 'icuuc', 'icudata', 'pthread', 'uv', 'rt', 'dl'])
+	env.Append(LIBS=['v8_libplatform', 'v8_base', 'v8_libbase', 'v8_nosnapshot', 'icui18n', 'icuuc', 'icudata', 'pthread', 'uv', 'rt', 'dl'])
 	env.Append(CXXFLAGS=['--std=c++0x', '-g', '-Wall'])
 	env.Append(CFLAGS=['-g', '-Wall'])
 	env.Append(LINKFLAGS=['-g'])
