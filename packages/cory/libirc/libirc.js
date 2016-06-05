@@ -1,6 +1,7 @@
 "use strict";
 
 //! {
+//! 	"category": "libraries",
 //! 	"permissions": [
 //! 		"network"
 //! 	],
@@ -37,13 +38,24 @@ class IrcService {
 		});
 	}
 
+	_decode(text) {
+		if (text) {
+			for (let i = 0; i < text.length; i++) {
+				if (text.charCodeAt(i) > 128) {
+					text = text.substring(0, i) + "?" + text.substring(i + 1);
+				}
+			}
+		}
+		return text;
+	}
+
 	_send(line) {
 		return this._socket.write(line + "\r\n");
 	}
 
 	_receivedLine(originalLine) {
 		try {
-			let line = originalLine;
+			let line = this._decode(originalLine);
 			let prefix;
 			if (line.charAt(0) == ":") {
 				let space = line.indexOf(" ");

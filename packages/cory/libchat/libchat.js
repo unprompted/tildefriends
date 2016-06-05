@@ -1,5 +1,7 @@
 "use strict";
 
+//! {"category": "libraries"}
+
 exports.ChatService = class {
 	static handleMessages(serviceClass) {
 		let self = this;

@@ -404,6 +404,11 @@ function niceTime(lastTime, thisTime) {
 function formatMessage(message) {
 	var result;
 	if (typeof message == "string") {
+		for (let i = 0; i < message.length; i++) {
+			if (message.charCodeAt(i) > 128 && message.charCodeAt(i) < 256) {
+				message = message.substring(0, i) + "?" + message.substring(i + 1);
+			}
+		}
 		result = [];
 		var regex = /(\w+:\/*\S+?)(?=(?:[\.!?])?(?:$|\s))/gi;
 		var match;
