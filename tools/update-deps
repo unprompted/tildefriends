@@ -2,6 +2,7 @@
 
 import os
 import shutil
+import stat
 import subprocess
 import sys
 
@@ -29,6 +30,13 @@ def run(*args, **kw):
 	print 'Running:', args, kw
 	subprocess.check_call(*args, **kw)
 
+def makeWritableAndRetry(function, path, exc_info):
+	if not os.access(path, os.W_OK):
+		os.chmod(path, stat.S_IWUSR)
+		function(path)
+	else:
+		raise
+
 def updateUv():
 	print 'libuv'
 	print
@@ -45,7 +53,7 @@ def updateUv():
 	if clean:
 		if os.path.isdir(os.path.join(kUvWork)):
 			print 'Cleaning', kUvWork
-			shutil.rmtree(os.path.join(kUvWork))
+			shutil.rmtree(os.path.join(kUvWork), onerror=makeWritableAndRetry)
 	if not os.path.isdir(kUvWork):
 		run(['git', 'clone', '--branch', kUvBranch, kUvRepository, kUvWork])
 	open(os.path.join(kUvWork, '.update-deps-branch'), 'w').write(kUvBranch)
@@ -81,7 +89,7 @@ def updateV8():
 
 	if clean:
 		if os.path.isdir(kV8Work):
-			shutil.rmtree(kV8Work)
+			shutil.rmtree(kV8Work, onerror=makeWritableAndRetry)
 
 	if True or sys.platform == 'linux2':
 		# XXX Modify this one .py file which assumes things that conflict with my debian environment.
