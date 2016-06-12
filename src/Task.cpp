@@ -310,7 +310,6 @@ bool Task::execute(const char* fileName) {
 
 void Task::invokeExport(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	Task* sender = Task::get(args.GetIsolate());
-	TaskTryCatch tryCatch(sender);
 	v8::Handle<v8::Object> data = v8::Handle<v8::Object>::Cast(args.Data());
 	exportid_t exportId = data->Get(v8::String::NewFromUtf8(args.GetIsolate(), "export"))->Int32Value();
 	taskid_t recipientId = data->Get(v8::String::NewFromUtf8(args.GetIsolate(), "task"))->Int32Value();
