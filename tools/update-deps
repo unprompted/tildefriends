@@ -1,6 +1,8 @@
 #!/usr/bin/python -u
 
+import multiprocessing
 import os
+import platform
 import shutil
 import stat
 import subprocess
@@ -25,6 +27,11 @@ kUvWork = 'uv'
 kV8Repository = 'https://github.com/v8/v8.git'
 kV8Branch = 'branch-heads/5.1'
 kV8Work = 'v8'
+
+cores = multiprocessing.cpu_count()
+if platform.machine() == 'armv7l':
+	cores = 1
+print 'Using', cores, 'cores.'
 
 def run(*args, **kw):
 	print 'Running:', args, kw
@@ -63,7 +70,7 @@ def updateUv():
 
 	if sys.platform == 'linux2':
 		run(['./gyp_uv.py', '-f', 'make'], cwd=kUvWork)
-		run(['make', '-j8', '-C', 'out'], cwd=kUvWork)
+		run(['make', '-j' + str(cores), '-C', 'out'], cwd=kUvWork)
 	elif sys.platform == 'darwin':
 		run(['./gyp_uv.py', '-f', 'xcode'], cwd=kUvWork)
 		run(['xcodebuild', '-ARCHS="x86_64"', '-project', 'uv.xcodeproj', '-configuration', 'Release', '-target', 'All'], cwd=kUvWork)
@@ -116,7 +123,7 @@ def updateV8():
 		run(['gclient' + extension, 'sync'], cwd=kV8Work)
 
 	if sys.platform == 'linux2':
-		run(['make', '-j4', 'native'], cwd=kV8Work)
+		run(['make', '-j' + str(cores), 'native'], cwd=kV8Work)
 	elif sys.platform == 'darwin':
 		run(['build/gyp_v8', '-Dtarget_arch=x64'], cwd=kV8Work)
 		run(['xcodebuild', '-project', 'build/all.xcodeproj', '-configuration', 'Release'], cwd=kV8Work)

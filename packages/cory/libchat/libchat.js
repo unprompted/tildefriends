@@ -48,7 +48,12 @@ exports.ChatService = class {
 		for (let i = self._callbacks.length - 1; i >= 0; i--) {
 			let callback = self._callbacks[i];
 			try {
-				callback(message);
+				callback(message).catch(function(error) {
+					self._callbacks.splice(i, 1);
+
+					// XXX: Send it to the other connections?
+					print(error);
+				});
 			} catch (error) {
 				self._callbacks.splice(i, 1);
 

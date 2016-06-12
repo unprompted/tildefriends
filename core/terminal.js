@@ -121,7 +121,13 @@ function invoke(handlers, argv) {
 	var promises = [];
 	if (handlers) {
 		for (var i = 0; i < handlers.length; ++i) {
-			promises.push(handlers[i].apply({}, argv));
+			try {
+				promises.push(handlers[i].apply({}, argv));
+			} catch (error) {
+				handlers.splice(i, 1);
+				i--;
+				promises.push(new Promise(function(resolve, reject) { reject(error); }));
+			}
 		}
 	}
 	return Promise.all(promises);
