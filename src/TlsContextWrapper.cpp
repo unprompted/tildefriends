@@ -49,7 +49,7 @@ void TlsContextWrapper::close() {
 	}
 }
 
-void TlsContextWrapper::onRelease(const v8::WeakCallbackData<v8::Object, TlsContextWrapper>& data) {
+void TlsContextWrapper::onRelease(const v8::WeakCallbackInfo<TlsContextWrapper>& data) {
 	data.GetParameter()->_object.Reset();
 	delete data.GetParameter();
 }
@@ -84,7 +84,7 @@ void TlsContextWrapper::ref() {
 void TlsContextWrapper::release() {
 	assert(_refCount >= 1);
 	if (--_refCount == 0) {
-		_object.SetWeak(this, onRelease);
+		_object.SetWeak(this, onRelease, v8::WeakCallbackType::kParameter);
 	}
 }
 

@@ -51,7 +51,7 @@ else:
 	env.Append(LINKFLAGS=['-g'])
 	env.Append(LIBPATH=[
 		os.path.join(v8, 'out/native/obj.target/third_party/icu'),
-		os.path.join(v8, 'out/native/obj.target/tools/gyp'),
+		os.path.join(v8, 'out/native/obj.target/src'),
 		os.path.join(uv, 'out/Debug/obj.target'),
 	])
 

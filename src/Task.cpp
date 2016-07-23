@@ -62,7 +62,7 @@ struct ImportRecord {
 		_task(taskId),
 		_owner(owner),
 		_useCount(0) {
-		_persistent.SetWeak(this, ImportRecord::onRelease);
+		_persistent.SetWeak(this, ImportRecord::onRelease, v8::WeakCallbackType::kParameter);
 	}
 
 	void ref() {
@@ -75,11 +75,11 @@ struct ImportRecord {
 	void release() {
 		if (--_useCount == 0) {
 			// All in-flight calls are finished.  Make weak.
-			_persistent.SetWeak(this, ImportRecord::onRelease);
+			_persistent.SetWeak(this, ImportRecord::onRelease, v8::WeakCallbackType::kParameter);
 		}
 	}
 
-	static void onRelease(const v8::WeakCallbackData<v8::Function, ImportRecord >& data) {
+	static void onRelease(const v8::WeakCallbackInfo<ImportRecord >& data) {
 		ImportRecord* import = data.GetParameter();
 		import->_owner->releaseExport(import->_task, import->_export);
 		for (size_t i = 0; i < import->_owner->_imports.size(); ++i) {
@@ -513,11 +513,12 @@ void Task::rejectPromise(promiseid_t promise, v8::Handle<v8::Value> value) {
 exportid_t Task::exportFunction(v8::Handle<v8::Function> function) {
 	exportid_t exportId = -1;
 	v8::Handle<v8::String> exportName = v8::String::NewFromUtf8(_isolate, "export");
+	v8::Local<v8::Private> privateKey = v8::Private::ForApi(_isolate, exportName);
 
-	v8::Local<v8::Value> value = function->GetHiddenValue(exportName);
-	if (!value.IsEmpty() && value->IsNumber())
+	v8::MaybeLocal<v8::Value> value = function->GetPrivate(_isolate->GetCurrentContext(), privateKey);
+	if (!value.IsEmpty() && value.ToLocalChecked()->IsNumber())
 	{
-		exportid_t foundId = value->ToInteger(_isolate)->Int32Value();
+		exportid_t foundId = value.ToLocalChecked()->ToInteger(_isolate)->Int32Value();
 		if (_exports[foundId]) {
 			exportId = foundId;
 		}
@@ -528,7 +529,7 @@ exportid_t Task::exportFunction(v8::Handle<v8::Function> function) {
 			exportId = _nextExport++;
 		} while (_exports[_nextExport]);
 		ExportRecord* record = new ExportRecord(_isolate, function);
-		function->SetHiddenValue(exportName, v8::Integer::New(_isolate, exportId));
+		function->SetPrivate(_isolate->GetCurrentContext(), privateKey, v8::Integer::New(_isolate, exportId));
 		_exports[exportId] = record;
 	}
 

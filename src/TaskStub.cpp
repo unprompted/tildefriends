@@ -42,7 +42,7 @@ void TaskStub::ref() {
 
 void TaskStub::release() {
 	if (--_refCount == 0) {
-		_taskObject.SetWeak(this, onRelease);
+		_taskObject.SetWeak(this, onRelease, v8::WeakCallbackType::kParameter);
 	}
 }
 
@@ -162,7 +162,8 @@ void TaskStub::onProcessExit(uv_process_t* process, int64_t status, int terminat
 	uv_close(reinterpret_cast<uv_handle_t*>(process), 0);
 }
 
-void TaskStub::onRelease(const v8::WeakCallbackData<v8::Object, TaskStub>& data) {
+void TaskStub::onRelease(const v8::WeakCallbackInfo<TaskStub>& data) {
+	// XXX?
 }
 
 void TaskStub::getExports(const v8::FunctionCallbackInfo<v8::Value>& args) {

@@ -54,7 +54,7 @@ private:
 	static void kill(const v8::FunctionCallbackInfo<v8::Value>& args);
 	static void statistics(const v8::FunctionCallbackInfo<v8::Value>& args);
 
-	static void onRelease(const v8::WeakCallbackData<v8::Object, TaskStub>& data);
+	static void onRelease(const v8::WeakCallbackInfo<TaskStub>& data);
 
 	static void onProcessExit(uv_process_t* process, int64_t status, int terminationSignal);
 };

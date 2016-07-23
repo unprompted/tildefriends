@@ -643,11 +643,11 @@ void Socket::ref() {
 void Socket::release() {
 	assert(_refCount >= 1);
 	if (--_refCount == 0) {
-		_object.SetWeak(this, onRelease);
+		_object.SetWeak(this, onRelease, v8::WeakCallbackType::kParameter);
 	}
 }
 
-void Socket::onRelease(const v8::WeakCallbackData<v8::Object, Socket>& data) {
+void Socket::onRelease(const v8::WeakCallbackInfo<Socket>& data) {
 	data.GetParameter()->_object.Reset();
 	data.GetParameter()->close();
 }

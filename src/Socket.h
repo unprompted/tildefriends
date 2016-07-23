@@ -72,7 +72,7 @@ private:
 	static void allocateBuffer(uv_handle_t* handle, size_t suggestedSize, uv_buf_t* buffer);
 	static void onRead(uv_stream_t* stream, ssize_t readSize, const uv_buf_t* buffer);
 	static void onWrite(uv_write_t* request, int status);
-	static void onRelease(const v8::WeakCallbackData<v8::Object, Socket>& data);
+	static void onRelease(const v8::WeakCallbackInfo<Socket>& data);
 
 	void processTlsShutdown(promiseid_t promise);
 	static void onTlsShutdown(uv_write_t* request, int status);

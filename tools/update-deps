@@ -25,7 +25,7 @@ kUvBranch = 'v1.9.1'
 kUvWork = 'uv'
 
 kV8Repository = 'https://github.com/v8/v8.git'
-kV8Branch = 'branch-heads/5.1'
+kV8Branch = 'branch-heads/5.2'
 kV8Work = 'v8'
 
 cores = multiprocessing.cpu_count()

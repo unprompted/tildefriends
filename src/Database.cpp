@@ -167,7 +167,7 @@ void Database::getAll(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	}
 }
 
-void Database::onRelease(const v8::WeakCallbackData<v8::Object, Database>& data) {
+void Database::onRelease(const v8::WeakCallbackInfo<Database>& data) {
 	data.GetParameter()->_object.Reset();
 	delete data.GetParameter();
 }
@@ -181,7 +181,7 @@ void Database::ref() {
 void Database::release() {
 	assert(_refCount >= 1);
 	if (--_refCount == 0) {
-		_object.SetWeak(this, onRelease);
+		_object.SetWeak(this, onRelease, v8::WeakCallbackType::kParameter);
 	}
 }
 
