@@ -37,11 +37,11 @@ if sys.platform == 'win32':
 	env.Append(LINKFLAGS=['/RELEASE', '/OPT:REF', '/OPT:ICF'])
 elif sys.platform == 'darwin':
 	env.Append(LIBS=['v8_base', 'v8_libbase', 'v8_libplatform', 'v8_nosnapshot', 'icui18n', 'icuuc', 'icudata', 'pthread', 'uv'])
-	env.Append(CXXFLAGS=['--std=c++11', '-g', '-Wall', '-stdlib=libstdc++'])
+	env.Append(CXXFLAGS=['--std=c++11', '-g', '-Wall', '-stdlib=libc++'])
 	env.Append(CFLAGS=['-g', '-Wall'])
-	env.Append(LINKFLAGS=['-g', '-stdlib=libstdc++'])
+	env.Append(LINKFLAGS=['-g', '-stdlib=libc++'])
 	env.Append(LIBPATH=[
-		os.path.join(v8, 'xcodebuild/Release'),
+		os.path.join(v8, 'out/native'),
 		os.path.join(uv, 'build/Release'),
 	])
 else:
