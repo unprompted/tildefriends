@@ -67,6 +67,10 @@ int main(int argc, char* argv[]) {
 	gPlatform = v8::platform::CreateDefaultPlatform();
 	v8::V8::InitializePlatform(gPlatform);
 	v8::V8::Initialize();
+
+	const char* kAsyncAwait = "--harmony-async-await";
+	v8::V8::SetFlagsFromString(kAsyncAwait, std::strlen(kAsyncAwait));
+
 	v8::V8::SetFlagsFromCommandLine(&argc, argv, true);
 
 	bool isChild = false;

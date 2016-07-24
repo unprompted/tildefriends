@@ -1,0 +1,23 @@
+#!/bin/bash
+
+cat > test.js << EOF
+print("hi");
+
+function foobar() {
+	return new Promise(function (resolve, reject) {
+		resolve(10);
+	});
+}
+
+async function huh() {
+	let v = await foobar();
+	print("v => " + v);
+	if (v != 10) {
+		throw new Error("nope");
+	}
+}
+
+huh();
+EOF
+
+$TILDEFRIENDS test.js
