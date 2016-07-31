@@ -83,17 +83,14 @@ function notifyChanged() {
 	return core.broadcast({changed: true});
 }
 
-function readList(key) {
-	return database.get(key).catch(function(error) {
-		return null;
-	}).then(function(todo) {
-		try {
-			todo = JSON.parse(todo);
-		} catch (error) {
-			todo = {name: "TODO", items: []};
-		}
-		return todo;
-	});
+async function readList(key) {
+	let todo = null;
+	try {
+		todo = JSON.parse(await database.get(key));
+	} catch (error) {
+		todo = {name: "TODO", items: []};
+	}
+	return todo;
 }
 
 function writeList(key, todo) {

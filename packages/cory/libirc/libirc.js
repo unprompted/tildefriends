@@ -98,6 +98,12 @@ class IrcService {
 				let person = prefix.split('!')[0];
 				let conversation = parts[1];
 				this._service.notifyPresenceChanged(conversation, person, "unavailable");
+			} else if (parts[0] == "QUIT") {
+				let person = prefix.split('!')[0];
+				let conversations = this._service.getConversations();
+				for (let i in conversations) {
+					this._service.notifyPresenceChanged(conversations[i], person, "unavailable");
+				}
 			} else if (parts[0] == "353") { // RPL_NAMREPLY
 				if (!this._nameReplies[parts[3]]) {
 					this._nameReplies[parts[3]] = [];
