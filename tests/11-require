@@ -1,0 +1,28 @@
+#!/bin/bash
+
+cat > required.js << EOF
+function foo() {
+	return 12345;
+}
+
+exports.foo = foo;
+EOF
+
+cat > test.js << EOF
+if (require("required").foo() != 12345) {
+	exit(1);
+}
+var gotError = false;
+try {
+	require("missing");
+} catch (error) {
+	print("nope");
+	gotError = true;
+}
+if (!gotError) {
+	exit(2);
+}
+exit(0);
+EOF
+
+$TILDEFRIENDS test.js

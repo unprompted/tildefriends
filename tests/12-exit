@@ -1,0 +1,10 @@
+#!/bin/bash
+
+cat > blah.js << EOF
+EOF
+
+cat > test.js << EOF
+require("blah");
+EOF
+
+$TILDEFRIENDS test.js

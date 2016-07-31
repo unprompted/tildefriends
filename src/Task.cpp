@@ -106,6 +106,7 @@ Task::Task() {
 Task::~Task() {
 	_exportObject.Reset();
 	_sourceObject.Reset();
+	_scriptExports.clear();
 
 	{
 		v8::Isolate::Scope isolateScope(_isolate);
@@ -286,7 +287,7 @@ bool Task::execute(const char* fileName) {
 		if (position != std::string::npos) {
 			path.resize(position + 1);
 		} else {
-			path = ".";
+			path = "./";
 		}
 		_path.push_back(path);
 	}
@@ -721,6 +722,7 @@ std::string Task::resolveRequire(const std::string& require) {
 		if (test.size() && (require.size() < 3 || require.rfind(".js") != require.size() - 3)) {
 			test += ".js";
 		}
+		std::cout << "Testing " << test << "\n";
 		uv_fs_t request;
 		if (uv_fs_access(_loop, &request, test.c_str(), R_OK, 0) == 0) {
 			result = test;
