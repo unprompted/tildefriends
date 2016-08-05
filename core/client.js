@@ -6,6 +6,7 @@ var gCredentials;
 var gErrorCount = 0;
 var gCommandHistory = [];
 var gSendKeyEvents = false;
+var gGeolocatorWatch;
 
 var kMaxCommandHistory = 16;
 
@@ -151,10 +152,48 @@ function receive(data) {
 				window.removeEventListener("keyup", keyEvent);
 			}
 			gSendKeyEvents = value;
+		} else if (line && line[0] && line[0].action == "getCurrentPosition") {
+				navigator.geolocation.getCurrentPosition(geolocationPosition, geolocationError, line[0].options);
+		} else if (line && line[0] && line[0].action == "watchPosition") {
+			if (navigator && navigator.geolocation && gGeolocatorWatch === undefined) {
+				gGeolocatorWatch = navigator.geolocation.watchPosition(geolocationPosition, geolocationError, line[0].options);
+			}
+		} else if (line && line[0] && line[0].action == "clearWatch") {
+			if (navigator && navigator.geolocation && gGeolocatorWatch !== undefined) {
+				navigator.geolocation.clearWatch(gGeolocatorWatch);
+			}
 		} else {
 			print(document.getElementById(target), line);
 		}
 	}
+}
+
+function geolocationPosition(position) {
+	send({
+		event: 'geolocation',
+		position: {
+			timestamp: position.timestamp,
+			coords: {
+				latitude: position.coords.latitude,
+				longitude: position.coords.longitude,
+				altitude: position.coords.altitude,
+				accuracy: position.coords.accuracy,
+				altitudeAccuracy: position.coords.altitudeAccuracy,
+				heading: position.coords.heading,
+				speed: position.coords.speed,
+			},
+		},
+	});
+}
+
+function geolocationError(error) {
+	send({
+		event: 'geolocation',
+		error: {
+			code: error.code,
+			message: error.message,
+		},
+	});
 }
 
 function keyEvent(event) {
@@ -493,6 +532,10 @@ function connectSocket() {
 					['setTitle', 'value'],
 					['split', 'options'],
 					['setSendKeyEvents', 'value'],
+
+					['getCurrentPosition', 'options'],
+					['watchPosition', 'options'],
+					['clearWatch'],
 				],
 			}));
 		}
