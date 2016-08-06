@@ -6,6 +6,7 @@ var gCredentials;
 var gErrorCount = 0;
 var gCommandHistory = [];
 var gSendKeyEvents = false;
+var gSendDeviceOrientationEvents = false;
 var gGeolocatorWatch;
 
 var kMaxCommandHistory = 16;
@@ -162,6 +163,14 @@ function receive(data) {
 			if (navigator && navigator.geolocation && gGeolocatorWatch !== undefined) {
 				navigator.geolocation.clearWatch(gGeolocatorWatch);
 			}
+		} else if (line && line[0] && line[0].action == "setSendDeviceOrientationEvents") {
+			let value = line[0].value;
+			if (value && !gSendDeviceOrientationEvents) {
+				window.addEventListener("deviceorientation", deviceOrientation);
+			} else if (!value && gSendDeviceOrientationEvents) {
+				window.removeEventListener("deviceorientation", deviceOrientation);
+			}
+			gSendDeviceOrientationEvents = value;
 		} else {
 			print(document.getElementById(target), line);
 		}
@@ -195,6 +204,18 @@ function geolocationError(error) {
 		},
 	});
 }
+
+function deviceOrientation(event) {
+	send({
+		event: 'deviceorientation',
+		orientation: {
+			alpha: event.alpha,
+			beta: event.beta,
+			gamma: event.gamma,
+			absolute: event.absolute,
+		},
+	});
+};
 
 function keyEvent(event) {
 	send({
@@ -536,6 +557,8 @@ function connectSocket() {
 					['getCurrentPosition', 'options'],
 					['watchPosition', 'options'],
 					['clearWatch'],
+
+					['setSendDeviceOrientationEvents', 'value'],
 				],
 			}));
 		}
