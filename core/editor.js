@@ -11,6 +11,15 @@ window.addEventListener("load", function() {
 		'showTrailingSpace': true,
 	});
 	gBackup = gEditor.getValue();
+	gEditor.focus();
+});
+
+window.addEventListener("keydown", function(event) {
+	if (event.keyCode == 83 && event.altKey) {
+		save();
+	} else if (event.keyCode == 66 && event.altKey) {
+		back();
+	}
 });
 
 function explodePath() {

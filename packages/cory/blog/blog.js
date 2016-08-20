@@ -1,195 +1,195 @@
 "use strict";
 
-//! {"category": "work in progress"}
+//! {"category": "work in progress", "require": ["libdocument", "liblist", "ui"]}
 
-class Log {
-	constructor(name, capacity) {
-		this._name = name;
-		this._capacity = capacity || -1;
+let libdocument = require("libdocument");
+let liblist = require("liblist");
+let libui = require("ui");
+
+class Blog {
+	constructor() {
+		this._list = liblist.ListStore("blog:list");
+		this._documents = libdocument.DocumentStore("blog:posts");
 	}
 
-	append(item) {
-		var log = this;
-		return database.get(log._name + "_head").catch(function(error) {
-			return 0;
-		}).then(function(head) {
-			var newHead = (parseInt(head) || 0) + 1;
-			var actions = [
-				database.set(log._name + "_" + newHead.toString(), JSON.stringify(item)),
-				database.set(log._name + "_head", newHead),
-			];
-			if (log._capacity >= 0) {
-				actions.push(log.truncate(newHead - log._capacity));
-			}
-			return Promise.all(actions);
-		});
-	}
-
-	truncate(end) {
-		var log = this;
-		return database.get(log._name + "_" + end.toString()).then(function(item) {
-			if (item) {
-				return database.remove(log._name + "_" + end.toString()).then(function() {
-					return log.truncate(end - 1);
-				});
-			}
-		});
-	}
-
-	get(count, start, result) {
-		var log = this;
-		if (!count) {
-			count = 10;
-		}
-
-		if (!start) {
-			return database.get(log._name + "_head").then(function(head) {
-				if (head !== undefined) {
-					return log.get(count, parseInt(head));
-				} else {
-					return [];
+	async renderIndex() {
+		terminal.cork();
+		try {
+			terminal.split([{name: "terminal"}]);
+			terminal.clear();
+			let posts = await this._list.get(-1, -10);
+			for (let i = 0; i < posts.length; i++) {
+				let post = await this._documents.get(posts[i]);
+				if (post) {
+					let formatted = this.formatPost(post);
+					for (let j in formatted) {
+						terminal.print(formatted[j]);
+					}
 				}
-			});
+			}
+			if (core.user.credentials.permissions.administration) {
+				terminal.print({command: JSON.stringify({action: "new"}), value: "new post"});
+			}
+		} finally {
+			terminal.uncork();
 		}
-
-		var promises = [];
-		promises.length = count;
-		for (var i = 0; i < count; i++) {
-			promises[i] = database.get(log._name + "_" + (start - i).toString());
-		}
-		return Promise.all(promises);
-	}
-};
-
-/*
-
-if (imports.terminal) {
-	core.register("onSubmit", function(message) {
-		core.broadcast(message);
-	});
-
-	core.register("onMessage", function(from, message) {
-		terminal.print(JSON.stringify(message));
-	});
-
-	terminal.print("Hello, world!");
-	var log = new Log("events");
-
-	function dump() {
-		return log.get().then(function(data) {
-			terminal.print(JSON.stringify(data));
-		}).catch(function(error) {
-			terminal.print(error);
-		});
 	}
 
-	core.register("onInput", function(input) {
-		log.append({message: input}).then(dump);
-	});
-}
-
-core.register("onAtom", function(query) {
-	return "hello, world!";
-});
-
-*/
-
-terminal.setEcho(false);
-
-var gBlog = new Log("blog");
-
-core.register("onInput", function(input) {
-	if (input == "new post") {
-		startNewPost();
-	} else if (input == "submit") {
-		submitNewPost().then(function() {
-			core.unregister("onWindowMessage", onWindowMessage);
-			renderBlog();
-		});
-	}
-});
-
-function renderBlog() {
-	terminal.split([
-		{name: "terminal"},
-	]);
-	terminal.select("terminal");
-
-	terminal.print("Blog Test");
-	if (core.user.credentials.permissions.authenticated) {
-		terminal.print({command: "new post"});
+	formatPost(post) {
+		let result = [
+			[{style: "font-size: xx-large", value: post.title}],
+			[{style: "font-size: x-small", value: post.author}, " ", {style: "font-size: x-small", value: post.created}],
+			post.body,
+		];
+		if (core.user.credentials.permissions.administration) {
+			result[0].push({command: JSON.stringify({action: "edit", post: post.name}), value: "edit"});
+		}
+		return result;
 	}
 
-	gBlog.get(10).then(function(entries) {
-		for (var i = 0; i < entries.length; i++) {
-			var entry = JSON.parse(entries[i]);
-			terminal.print({style: "font-weight: bold", value: entry.title});
-			terminal.print(entry.entry);
-			terminal.print();
+	async submitPost(post) {
+		let now = new Date();
+		let oldPost = await this._documents.get(post.name);
+		if (!oldPost) {
+			post.created = now;
+			post.author = core.user.name;
+			this._list.push(post.name);
+		} else {
+			for (let key in oldPost) {
+				if (!post[key]) {
+					post[key] = oldPost[key];
+				}
+			}
 		}
-	});
-}
+		post.modified = now;
+		await this._documents.set(post.name, post);
+	}
 
-var gNewPost;
+	async deletePost(name) {
+		await this._documents.set(name, null);
+	}
 
-function submitNewPost() {
-	return gBlog.append(gNewPost);
-}
-
-function onWindowMessage(message) {
-	gNewPost = message.message;
-	terminal.cork();
-	terminal.select("right");
-	terminal.clear();
-	terminal.print({style: "font-width: x-large", value: message.message.title});
-	terminal.print(message.message.entry);
-	terminal.print({command: "submit"});
-	terminal.uncork();
-}
-
-function startNewPost() {
-	core.register("onWindowMessage", onWindowMessage);
-	terminal.split([
-		{
-			type: "horizontal",
-			children: [
-				{name: "left", grow: "0", shrink: "0", basis: "50%"},
-				{name: "right", grow: "0", shrink: "0", basis: "50%"},
-			],
+	async handleCommand(command) {
+		if (command.action == "edit") {
+			await this.edit(command.post);
+		} else if (command.action == "new") {
+			await this.edit(null);
+		} else if (command.action == "delete") {
+			await this.deletePost(command.post);
 		}
-	]);
-	terminal.select("left");
-	terminal.print({iframe: `<html>
-		<head>
+	}
+
+	async edit(page) {
+		terminal.cork();
+		try {
+			let self = this;
+			self._post = await this._documents.get(page);
+
+			if (!this._onWindowMessage) {
+				this._onWindowMessage = function(event) {
+					let message = event.message;
+					if (message == "load") {
+						terminal.postMessageToIframe("iframe", self._post);
+					} else if (message.action == "save") {
+						self.submitPost(message.post).then(self.renderIndex.bind(self)).catch(terminal.print);
+					} else if (message.action == "delete") {
+						self.deletePost(message.post).then(self.renderIndex.bind(self)).catch(terminal.print);
+					} else if (message.action == "back") {
+						self.renderIndex.bind(self)().catch(terminal.print);
+					}
+				}
+				core.register("onWindowMessage", this._onWindowMessage);
+			}
+
+			terminal.split([{name: "terminal", type: "vertical"}]);
+			terminal.clear();
+			terminal.print({iframe: `
+<!DOCTYPE html>
+<html>
+	<head>
+			<script src="//cdnjs.cloudflare.com/ajax/libs/codemirror/5.13.2/codemirror.min.js"></script>
+			<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/codemirror/5.13.2/codemirror.min.css"></link>
 			<style>
-				html, body, textarea {
-					position: relative;
-					width: 100%;
+				html, body, #contents {
 					height: 100%;
 					margin: 0;
 					padding: 0;
-					overflow: hidden;
 				}
-				textarea {
-					overflow: auto;
-					resize: none;
+				body {
+					display: flex;
+					flex-direction: column;
+					color: #fff;
+				}
+				.CodeMirror {
+					width: 100%;
+					height: 100%;
+				}
+				.CodeMirror-scroll {
 				}
 			</style>
-			<script>
-				function textChanged() {
-					parent.postMessage({
+	</head>
+	<body>
+		<div>
+			<input type="button" id="back" value="Back" onclick="back()">
+			<input type="button" id="save" value="Save" onclick="save()">
+			<input type="button" id="delete" value="Delete" onclick="deletePost()">
+		</div>
+		<div><label for="name">Name:</label> <input type="text" id="name"></div>
+		<div><label for="title">Title:</label> <input type="text" id="title"></div>
+		<textarea id="contents" style="width: 100%; height: 100%"></textarea>
+		<script>
+			var gEditor;
+			window.addEventListener("message", function(event) {
+				var message = event.data;
+				console.debug(message);
+				gEditor.setValue(message.body || "");
+				document.getElementById("name").value = message.name || "untitled";
+				document.getElementById("title").value = message.title || "untitled";
+			});
+			window.addEventListener("load", function() {
+				gEditor = CodeMirror.fromTextArea(document.getElementById("contents"), {
+					lineNumbers: true
+				});
+				//gEditor.on("change", textChanged);
+				parent.postMessage("load", "*");
+			});
+			function back() {
+				parent.postMessage({action: "back"}, "*");
+			}
+			function save() {
+				parent.postMessage({
+					action: "save",
+					post: {
+						name: document.getElementById("name").value,
 						title: document.getElementById("title").value,
-						entry: document.getElementById("entry").value,
-					}, "*");
-				}
-			</script>
-		</head>
-		<body>
-			<input type="text" id="title" style="width: 100%" oninput="textChanged()">
-			<textarea id="entry" oninput="textChanged()"></textarea>
-		</body>
-	</html>`, style: "overflow: hidden; position: relative; left: 0; top: 0; right: 0; bottom: 0"});
-	terminal.select("right");
+						body: gEditor.getValue(),
+					},
+				}, "*");
+			}
+			function deletePost() {
+				parent.postMessage({
+					action: "delete",
+					post: document.getElementById("name").value,
+				}, "*");
+			}
+		</script>
+	</body>
+</html>
+`, name: "iframe", style: "flex: 1 1 auto; width: 100%; margin: 0; border: 0; padding: 0;"});
+		} finally {
+			terminal.uncork();
+		}
+	}
 }
 
-renderBlog();
+terminal.setEcho(false);
+let blog = new Blog();
+blog.renderIndex().catch(terminal.print);
+
+core.register("onInput", async function(input) {
+	try {
+		await blog.handleCommand(JSON.parse(input));
+	} catch (error) {
+		terminal.print(error);
+	}
+});

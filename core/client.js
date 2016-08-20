@@ -11,7 +11,7 @@ var gGeolocatorWatch;
 
 var kMaxCommandHistory = 16;
 
-function enter(event) {
+function keydown(event) {
 	if (event.keyCode == 13) {
 		gCommandHistory.push(document.getElementById("input").value);
 		if (gCommandHistory.length > kMaxCommandHistory) {
@@ -19,20 +19,23 @@ function enter(event) {
 		}
 		send();
 		event.preventDefault();
-	} else if (event.keyCode == 38) {
+	} else if (event.keyCode == 38 && !event.altKey) {
 		if (gCommandHistory.length) {
 			var input = document.getElementById("input");
 			gCommandHistory.unshift(input.value);
 			input.value = gCommandHistory.pop();
 			event.preventDefault();
 		}
-	} else if (event.keyCode == 40) {
+	} else if (event.keyCode == 40 && !event.altKey) {
 		if (gCommandHistory.length) {
 			var input = document.getElementById("input");
 			gCommandHistory.push(input.value);
 			input.value = gCommandHistory.shift();
 			event.preventDefault();
 		}
+	} else if (event.keyCode == 69 && event.altKey) {
+		window.location.href = url() + "/edit";
+		event.preventDefault();
 	}
 }
 
@@ -576,7 +579,7 @@ window.addEventListener("load", function() {
 		Notification.requestPermission();
 	}
 	var input = document.getElementById("input");
-	input.addEventListener("keydown", enter);
+	input.addEventListener("keydown", keydown);
 	input.focus();
 	window.addEventListener("hashchange", hashChange);
 	window.addEventListener("focus", focus);
