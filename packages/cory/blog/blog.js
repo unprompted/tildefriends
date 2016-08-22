@@ -50,16 +50,19 @@ class Blog {
 	async submitPost(post) {
 		let now = new Date();
 		let oldPost = await this._documents.get(post.name);
-		if (!oldPost) {
-			post.created = now;
-			post.author = core.user.name;
+		if (!await this._list.getByKey(post.name)) {
 			this._list.push(post.name);
-		} else {
-			for (let key in oldPost) {
-				if (!post[key]) {
-					post[key] = oldPost[key];
-				}
+		}
+		for (let key in oldPost) {
+			if (!post[key]) {
+				post[key] = oldPost[key];
 			}
+		}
+		if (!post.created) {
+			post.created = now;
+		}
+		if (!post.author) {
+			post.author = core.user.name;
 		}
 		post.modified = now;
 		await this._documents.set(post.name, post);
