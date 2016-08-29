@@ -23,6 +23,7 @@ exports.ChatService = class {
 		this._callbacks = [callback];
 		this._conversations = {};
 		this._state = null;
+		this._maxHistory = 64;
 	}
 
 	makeInterface(service) {
@@ -70,9 +71,17 @@ exports.ChatService = class {
 		return this._conversations[conversation];
 	}
 
+	_pushMessage(conversation, message) {
+		let history = this._getConversation(conversation || "").history;
+		history.push(message);
+		if (history.length > this._maxHistory) {
+			history.splice(0, history.length - this._maxHistory);
+		}
+	}
+
 	notifyMessageReceived(conversation, message) {
 		let fullMessage = {action: "message", conversation: conversation || "", message: message};
-		this._getConversation(conversation || "").history.push(fullMessage);
+		this._pushMessage(conversation, fullMessage);
 		this._invokeCallback(fullMessage);
 	}
 
@@ -85,12 +94,14 @@ exports.ChatService = class {
 		} else if (index == -1) {
 			participants.push(user);
 		}
-		this._invokeCallback({
+		let message = {
 			action: "presence",
 			conversation: conversation,
 			user: user,
 			presence: state,
-		});
+		};
+		this._pushMessage(conversation, message);
+		this._invokeCallback(message);
 	}
 
 	notifyParticipantList(conversation, participants) {
