@@ -89,10 +89,13 @@ exports.ChatService = class {
 		let leaving = state == "unavailable";
 		let participants = this._getConversation(conversation).participants;
 		let index = participants.indexOf(user);
+		let different = true;
 		if (leaving) {
 			participants.splice(index, 1);
 		} else if (index == -1) {
 			participants.push(user);
+		} else {
+			different = false;
 		}
 		let message = {
 			action: "presence",
@@ -100,7 +103,9 @@ exports.ChatService = class {
 			user: user,
 			presence: state,
 		};
-		this._pushMessage(conversation, message);
+		if (different) {
+			this._pushMessage(conversation, message);
+		}
 		this._invokeCallback(message);
 	}
 

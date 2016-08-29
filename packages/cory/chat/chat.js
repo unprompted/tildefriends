@@ -242,26 +242,22 @@ function updateConversation() {
 			gCurrentConversation.session.getHistory(gCurrentConversation.name),
 			gCurrentConversation.session.getParticipants(gCurrentConversation.name),
 		]).then(function(data) {
-			let history = data[0];
-			let participants = data[1];
-			gCurrentConversation.messages = history || [];
-			if (gCurrentConversation.messages.length > kMaxHistory) {
-				gCurrentConversation.messages.splice(0, gCurrentConversation.messages.length - kMaxHistory);
-			}
+			let [history, participants] = data;
 			gCurrentConversation.participants = participants || [];
-			terminal.cork();
-			terminal.select("terminal");
-			terminal.clear();
-			for (var i in gCurrentConversation.messages) {
-				let message = gCurrentConversation.messages[i];
-				if (message.action == "message") {
-					printMessage(message.message);
-				} else {
-					terminal.print(message.message);
+			try {
+				terminal.cork();
+				terminal.select("terminal");
+				terminal.clear();
+				printToConversation(gCurrentConversation, ["[", gCurrentConversation.name, "]"]);
+				if (history) {
+					for (let message of history) {
+						printToConversation(gCurrentConversation, message);
+					}
 				}
+				updateUsers();
+			} finally {
+				terminal.uncork();
 			}
-			updateUsers();
-			terminal.uncork();
 		}).catch(function(error) {
 			terminal.print(error);
 		});
@@ -334,12 +330,15 @@ function printToConversation(conversation, message, notify) {
 	if (conversation == gCurrentConversation) {
 		if (message.action == "message") {
 			printMessage(message.message);
+		} else if (message.action == "presence") {
+			if (message.presence == "unavailable") {
+				terminal.print(new Date().toString(), ": ", message.user, " has left the room.");
+			} else {
+				terminal.print(new Date().toString(), ": ", message.user, " has joined the room.");
+			}
 		} else {
 			terminal.print(message);
 		}
-	}
-	if (conversation) {
-		conversation.messages.push(message);
 	}
 	if (notify && !gFocus) {
 		gUnread++;
