@@ -130,7 +130,7 @@ def updateV8():
 		run(['make', '-j' + str(cores), 'native'], cwd=kV8Work)
 	elif sys.platform == 'win32':
 		run(['python', 'gypfiles\\gyp_v8', '-Dtarget_arch=x64'], cwd=kV8Work, env=win32Env)
-		run(['devenv.com', '/Build', 'Release_x64', 'src\\v8.sln'], cwd=kV8Work)
+		run(['devenv.com', 'src\\v8.sln', '/Build', 'Release'], cwd=kV8Work)
 
 if __name__ == '__main__':
 	updateUv()
