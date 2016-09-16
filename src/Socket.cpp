@@ -91,7 +91,7 @@ void Socket::startTls(const v8::FunctionCallbackInfo<v8::Value>& args) {
 		if (!socket->_tls) {
 			TlsContext* context = 0;
 
-			if (args.Length() > 0 && !args[0].IsEmpty() && !args[0]->IsUndefined()) {
+			if (args.Length() > 0 && !args[0].IsEmpty() && args[0]->IsObject()) {
 				if (TlsContextWrapper* wrapper = TlsContextWrapper::get(args[0])) {
 					context = wrapper->getContext();
 				}
