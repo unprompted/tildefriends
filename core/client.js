@@ -280,8 +280,12 @@ function printStructured(container, data) {
 			node.setAttribute("target", data.target || "_blank");
 		} else if (data.iframe) {
 			node = document.createElement("iframe");
-			node.setAttribute("srcdoc", data.iframe);
-			node.setAttribute("sandbox", "allow-forms allow-scripts allow-top-navigation");
+			if (data.src) {
+				node.setAttribute("src", data.src);
+			} else {
+				node.setAttribute("srcdoc", data.iframe);
+			}
+			node.setAttribute("sandbox", "allow-forms allow-scripts allow-top-navigation allow-same-origin");
 			node.setAttribute("width", data.width || 320);
 			node.setAttribute("height", data.height || 240);
 			if (data.name) {
@@ -519,7 +523,13 @@ function blur() {
 }
 
 function onMessage(event) {
-	send({event: "onWindowMessage", message: event.data});
+	if (event.data && event.data.event == "resizeMe" && event.data.width && event.data.height) {
+		var iframe = document.getElementById("iframe_" + event.data.name);
+		iframe.setAttribute("width", event.data.width);
+		iframe.setAttribute("height", event.data.height);
+	} else {
+		send({event: "onWindowMessage", message: event.data});
+	}
 }
 
 function submitButton() {

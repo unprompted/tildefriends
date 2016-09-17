@@ -252,3 +252,10 @@ exports.StanzaParser = function(depth) {
 		reset: parser.reset.bind(parser),
 	};
 }
+
+exports.StreamParser = function() {
+	let parser = new XmlStreamParser();
+	return {
+		parse: parser.parse.bind(parser),
+	};
+}

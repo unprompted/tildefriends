@@ -250,8 +250,9 @@ function updateConversation() {
 				terminal.clear();
 				printToConversation(gCurrentConversation, ["[", gCurrentConversation.name, "]"]);
 				if (history) {
+					let previous = Promise.resolve();
 					for (let message of history) {
-						printToConversation(gCurrentConversation, message);
+						previous = previous.then(x => printToConversation(gCurrentConversation, message));
 					}
 				}
 				updateUsers();
@@ -326,10 +327,10 @@ function getConversation(session, conversationName) {
 	return result;
 }
 
-function printToConversation(conversation, message, notify) {
+async function printToConversation(conversation, message, notify) {
 	if (conversation == gCurrentConversation) {
 		if (message.action == "message") {
-			printMessage(message.message);
+			await printMessage(message.message);
 		} else if (message.action == "presence") {
 			if (message.presence == "unavailable") {
 				terminal.print(new Date().toString(), ": ", message.user, " has left the room.");
@@ -405,7 +406,7 @@ function niceTime(lastTime, thisTime) {
 	return result.join(" ");
 }
 
-function formatMessage(message) {
+async function formatMessage(message) {
 	var result;
 	if (typeof message == "string") {
 		for (let i = 0; i < message.length; i++) {
@@ -417,9 +418,17 @@ function formatMessage(message) {
 		var regex = /(\w+:\/*\S+?)(?=(?:[\.!?])?(?:$|\s))/gi;
 		var match;
 		var lastIndex = 0;
+		let libunfurl;
 		while ((match = regex.exec(message)) !== null) {
+			if (!libunfurl) {
+				libunfurl = await core.getService("libunfurl", "libunfurl");
+			}
 			result.push({class: "base1", value: message.substring(lastIndex, match.index)});
-			result.push({href: match[0]});
+			if (!libunfurl) {
+				result.push({href: match[0]});
+			} else {
+				result.push(await libunfurl.postMessage(match[0]));
+			}
 			lastIndex = regex.lastIndex;
 		}
 		result.push({class: "base1", value: message.substring(lastIndex)});
@@ -430,7 +439,7 @@ function formatMessage(message) {
 }
 
 var lastTimestamp = null;
-function printMessage(message) {
+async function printMessage(message) {
 	var now = message.timestamp || new Date().toString();
 	var from = message.from || "unknown";
 
@@ -441,7 +450,7 @@ function printMessage(message) {
 		{class: "base3", value: from},
 		{class: "base00", value: ">"},
 		" ",
-		formatMessage(message.message));
+		await formatMessage(message.message));
 	lastTimestamp = now;
 }
 
