@@ -527,6 +527,13 @@ function onMessage(event) {
 		var iframe = document.getElementById("iframe_" + event.data.name);
 		iframe.setAttribute("width", event.data.width);
 		iframe.setAttribute("height", event.data.height);
+		var node = iframe.parentElement;
+		while (node && !node.classList.contains("terminal")) {
+			node = node.parentElement;
+		}
+		if (node) {
+			autoScroll(node);
+		}
 	} else {
 		send({event: "onWindowMessage", message: event.data});
 	}

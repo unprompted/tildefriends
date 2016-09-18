@@ -6,6 +6,7 @@ let libxml = require("libxml");
 let libhttp = require("libhttp");
 
 let gEmbedIndex = 0;
+let gCache = {};
 
 async function unfurl(url) {
 	let result = {href: url};
@@ -26,10 +27,8 @@ async function unfurl(url) {
 		result = [{href: url}, "\n", {
 			name: "oEmbed" + gEmbedIndex,
 			iframe: `
-	<span style="border: 0; padding: 0; margin: 0; overflow: hidden">
-		${oEmbed.html}
-	</span>
-	<script language="javascript">
+	<style type="text/css">border: 0; padding: 0; margin: 0; overflow: hidden</style>
+	${oEmbed.html}<script language="javascript">
 		let gResizeMeMessage = {
 			event: "resizeMe",
 			name: "oEmbed${gEmbedIndex}",
@@ -44,8 +43,7 @@ async function unfurl(url) {
 				parent.postMessage(gResizeMeMessage, "*");
 			}
 		}, 100);
-	</script>
-`,
+	</script>`,
 			width: oEmbed.width || 320,
 			height: oEmbed.height || 120,
 			style: "margin: 0; padding: 0; border: 0; overflow: hidden",
@@ -62,6 +60,23 @@ async function test() {
 
 //test().catch(terminal.print);
 
-core.register("onMessage", function(sender, message) {
-	return unfurl(message).catch(error => [message, "(error retrieving: ", error, ")"]);
+core.register("onMessage", async function(sender, message) {
+	let result = message;
+	if (gCache[message] && new Date().valueOf() < gCache[message].expires) {
+		result = gCache[message].result;
+	} else {
+		if (gCache[message]) {
+			print("Didn't use", gCache[message]);
+		}
+		try {
+			result = await unfurl(message);
+		} catch (error) {
+			result = [message, "(error retrieving: ", error, ")"];
+		}
+		gCache[message] = {
+			expires: new Date().valueOf() + 7 * 24 * 60 * 60 * 1000,
+			result: result,
+		};
+	}
+	return result;
 });
