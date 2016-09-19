@@ -63,7 +63,7 @@ int main(int argc, char* argv[]) {
 	int result = 0;
 	uv_setup_args(argc, argv);
 	TaskStub::initialize();
-	v8::V8::InitializeICU();
+	v8::V8::InitializeICUDefaultLocation(argv[0]);
 	gPlatform = v8::platform::CreateDefaultPlatform();
 	v8::V8::InitializePlatform(gPlatform);
 	v8::V8::Initialize();

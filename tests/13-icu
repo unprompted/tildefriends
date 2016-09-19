@@ -1,0 +1,6 @@
+cat > test.js << EOF
+print("Hi");
+print(parseInt("3").toLocaleString());
+EOF
+
+$TILDEFRIENDS test.js
