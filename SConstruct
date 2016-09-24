@@ -31,7 +31,7 @@ if sys.platform == 'win32':
 	env.Append(CXXFLAGS=['/EHsc', '/MT', '/Zi', '/Gy'])
 	env.Append(CFLAGS=['/EHsc', '/MT', '/Zi', '/Gy'])
 	env.Append(LIBPATH=[
-		os.path.join(v8, 'out/Release/lib'),
+		os.path.join(v8, 'build/Release/lib'),
 		os.path.join(uv, 'Release/lib'),
 	])
 	env.Append(LINKFLAGS=['/RELEASE', '/OPT:REF', '/OPT:ICF'])
