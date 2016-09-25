@@ -55,7 +55,10 @@ else:
 		os.path.join(uv, 'out/Debug/obj.target'),
 	])
 
-env.Command('icudtl.dat', os.path.join(v8, 'out/native/icudtl.dat'), Copy("$TARGET", "$SOURCE"))
+if sys.platform == 'win32':
+	env.Command('icudtl.dat', os.path.join(v8, 'build/Release/icudtl.dat'), Copy("$TARGET", "$SOURCE"))
+else:
+	env.Command('icudtl.dat', os.path.join(v8, 'out/native/icudtl.dat'), Copy("$TARGET", "$SOURCE"))
 
 ldapEnv = env.Clone()
 if sys.platform == 'win32':
