@@ -63,7 +63,7 @@ else:
 	])
 
 if sys.platform == 'win32':
-	env.Command('icudtl.dat', os.path.join(v8, 'build/Release/icudtl.dat'), Copy("$TARGET", "$SOURCE"))
+	env.Command('icudtl.dat', os.path.join(v8, 'x64.release/icudtl.dat'), Copy("$TARGET", "$SOURCE"))
 else:
 	env.Command('icudtl.dat', os.path.join(v8, 'out/native/icudtl.dat'), Copy("$TARGET", "$SOURCE"))
 
