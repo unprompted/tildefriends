@@ -129,7 +129,7 @@ def updateV8():
 	elif sys.platform == 'darwin':
 		run(['make', '-j' + str(cores), 'native'], cwd=kV8Work)
 	elif sys.platform == 'win32':
-		run(['gn', 'gen', 'x64.release', 'is_component_build=false'], cwd=kV8Work, env=win32Env)
+		run(['gn.bat', 'gen', 'x64.release', 'is_component_build=false'], cwd=kV8Work, env=win32Env)
 		run(['ninja', '-C', 'x64.release'], cwd=kV8Work)
 
 if __name__ == '__main__':
