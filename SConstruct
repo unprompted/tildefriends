@@ -20,6 +20,7 @@ Help(options.GenerateHelpText(env))
 
 v8 = env['v8']
 uv = env['uv']
+libObjects = []
 env.Append(CPPPATH=[
 	os.path.join(v8, 'include'),
 	v8,
@@ -27,14 +28,20 @@ env.Append(CPPPATH=[
 	os.path.join('deps', 'liblmdb'),
 ])
 if sys.platform == 'win32':
-	env.Append(LIBS=['v8_base_0', 'v8_base_1', 'v8_base_2', 'v8_base_3', 'v8_libbase', 'v8_libsampler', 'v8_libplatform', 'v8_nosnapshot', 'icui18n', 'icuuc', 'libuv', 'advapi32', 'winmm', 'wsock32', 'ws2_32', 'psapi', 'iphlpapi', 'userenv', 'user32'])
-	env.Append(CXXFLAGS=['/EHsc', '/MT', '/Zi', '/Gy'])
-	env.Append(CFLAGS=['/EHsc', '/MT', '/Zi', '/Gy'])
+	libObjects += Glob(os.path.join(v8, 'x64.release', 'obj', 'v8_base', '*.obj'))
+	libObjects += Glob(os.path.join(v8, 'x64.release', 'obj', 'v8_libbase', '*.obj'))
+	libObjects += Glob(os.path.join(v8, 'x64.release', 'obj', 'v8_libsampler', '*.obj'))
+	libObjects += Glob(os.path.join(v8, 'x64.release', 'obj', 'v8_libplatform', '*.obj'))
+	libObjects += Glob(os.path.join(v8, 'x64.release', 'obj', 'v8_nosnapshot', '*.obj'))
+	libObjects += Glob(os.path.join(v8, 'x64.release', 'obj', 'third_party', 'icu', 'icui18n', '*.obj'))
+	libObjects += Glob(os.path.join(v8, 'x64.release', 'obj', 'third_party', 'icu', 'icuuc', '*.obj'))
+	env.Append(LIBS=['libuv', 'advapi32', 'winmm', 'wsock32', 'ws2_32', 'psapi', 'iphlpapi', 'userenv', 'user32', 'dbghelp', 'shlwapi'])
+	env.Append(CXXFLAGS=['/EHsc', '/MTd', '/Zi', '/Gy'])
+	env.Append(CFLAGS=['/EHsc', '/MTd', '/Zi', '/Gy'])
 	env.Append(LIBPATH=[
-		os.path.join(v8, 'build/Release/lib'),
 		os.path.join(uv, 'Release/lib'),
 	])
-	env.Append(LINKFLAGS=['/RELEASE', '/OPT:REF', '/OPT:ICF'])
+	env.Append(LINKFLAGS=['/RELEASE', '/OPT:REF', '/OPT:ICF', '/NODEFAULTLIB:libcmt', '/LTCG'])
 elif sys.platform == 'darwin':
 	env.Append(LIBS=['v8_base', 'v8_libbase', 'v8_libsampler', 'v8_libplatform', 'v8_nosnapshot', 'icui18n', 'icuuc', 'pthread', 'uv'])
 	env.Append(CXXFLAGS=['--std=c++11', '-g', '-Wall', '-stdlib=libc++'])
@@ -77,7 +84,7 @@ if sys.platform == 'darwin':
 	env.Append(FRAMEWORKS=['CoreFoundation', 'Security'])
 elif sys.platform == 'win32':
 	env.Append(LIBS=['Crypt32'])
-env.Program('tildefriends', source)
+env.Program('tildefriends', source + libObjects)
 
 def listAllFiles(root):
 	for root, dirs, files in os.walk(root):
