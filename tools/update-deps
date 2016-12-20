@@ -124,13 +124,8 @@ def updateV8():
 	else:
 		run(['gclient' + extension, 'sync'], cwd=kV8Work)
 
-	if sys.platform == 'linux2':
-		run(['make', '-j' + str(cores), 'native'], cwd=kV8Work)
-	elif sys.platform == 'darwin':
-		run(['make', '-j' + str(cores), 'native'], cwd=kV8Work)
-	elif sys.platform == 'win32':
-		run(['gn.bat', 'gen', 'x64.release', "--args=is_component_build=false"], cwd=kV8Work, env=win32Env)
-		run(['ninja', '-C', 'x64.release'], cwd=kV8Work)
+	run(['gn' + extension, 'gen', 'out', "--args=is_component_build=false"], cwd=kV8Work, env=win32Env)
+	run(['ninja', '-C', 'out'], cwd=kV8Work)
 
 if __name__ == '__main__':
 	updateUv()

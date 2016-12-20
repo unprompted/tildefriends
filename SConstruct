@@ -27,14 +27,17 @@ env.Append(CPPPATH=[
 	os.path.join(uv, 'include'),
 	os.path.join('deps', 'liblmdb'),
 ])
+
+objectSuffix = '.obj' if sys.platform == 'win32' else '.o'
+libObjects += Glob(os.path.join(v8, 'out', 'obj', 'v8_base', '*' + objectSuffix))
+libObjects += Glob(os.path.join(v8, 'out', 'obj', 'v8_libbase', '*' + objectSuffix))
+libObjects += Glob(os.path.join(v8, 'out', 'obj', 'v8_libsampler', '*' + objectSuffix))
+libObjects += Glob(os.path.join(v8, 'out', 'obj', 'v8_libplatform', '*' + objectSuffix))
+libObjects += Glob(os.path.join(v8, 'out', 'obj', 'v8_nosnapshot', '*' + objectSuffix))
+libObjects += Glob(os.path.join(v8, 'out', 'obj', 'third_party', 'icu', 'icui18n', '*' + objectSuffix))
+libObjects += Glob(os.path.join(v8, 'out', 'obj', 'third_party', 'icu', 'icuuc', '*' + objectSuffix))
+
 if sys.platform == 'win32':
-	libObjects += Glob(os.path.join(v8, 'x64.release', 'obj', 'v8_base', '*.obj'))
-	libObjects += Glob(os.path.join(v8, 'x64.release', 'obj', 'v8_libbase', '*.obj'))
-	libObjects += Glob(os.path.join(v8, 'x64.release', 'obj', 'v8_libsampler', '*.obj'))
-	libObjects += Glob(os.path.join(v8, 'x64.release', 'obj', 'v8_libplatform', '*.obj'))
-	libObjects += Glob(os.path.join(v8, 'x64.release', 'obj', 'v8_nosnapshot', '*.obj'))
-	libObjects += Glob(os.path.join(v8, 'x64.release', 'obj', 'third_party', 'icu', 'icui18n', '*.obj'))
-	libObjects += Glob(os.path.join(v8, 'x64.release', 'obj', 'third_party', 'icu', 'icuuc', '*.obj'))
 	env.Append(LIBS=['libuv', 'advapi32', 'winmm', 'wsock32', 'ws2_32', 'psapi', 'iphlpapi', 'userenv', 'user32', 'dbghelp', 'shlwapi'])
 	env.Append(CXXFLAGS=['/EHsc', '/MTd', '/Zi', '/Gy'])
 	env.Append(CFLAGS=['/EHsc', '/MTd', '/Zi', '/Gy'])
@@ -43,29 +46,23 @@ if sys.platform == 'win32':
 	])
 	env.Append(LINKFLAGS=['/RELEASE', '/OPT:REF', '/OPT:ICF', '/NODEFAULTLIB:libcmt', '/LTCG'])
 elif sys.platform == 'darwin':
-	env.Append(LIBS=['v8_base', 'v8_libbase', 'v8_libsampler', 'v8_libplatform', 'v8_nosnapshot', 'icui18n', 'icuuc', 'pthread', 'uv'])
+	env.Append(LIBS=['pthread', 'uv'])
 	env.Append(CXXFLAGS=['--std=c++11', '-g', '-Wall', '-stdlib=libc++'])
 	env.Append(CFLAGS=['-g', '-Wall'])
 	env.Append(LINKFLAGS=['-g', '-stdlib=libc++'])
 	env.Append(LIBPATH=[
-		os.path.join(v8, 'out/native'),
 		os.path.join(uv, 'build/Release'),
 	])
 else:
-	env.Append(LIBS=['v8_libplatform', 'v8_base', 'v8_libbase', 'v8_libsampler', 'v8_nosnapshot', 'icui18n', 'icuuc', 'pthread', 'uv', 'rt', 'dl'])
+	env.Append(LIBS=['pthread', 'uv', 'rt', 'dl'])
 	env.Append(CXXFLAGS=['--std=c++0x', '-g', '-Wall'])
 	env.Append(CFLAGS=['-g', '-Wall'])
 	env.Append(LINKFLAGS=['-g'])
 	env.Append(LIBPATH=[
-		os.path.join(v8, 'out/native/obj.target/third_party/icu'),
-		os.path.join(v8, 'out/native/obj.target/src'),
 		os.path.join(uv, 'out/Debug/obj.target'),
 	])
 
-if sys.platform == 'win32':
-	env.Command('icudtl.dat', os.path.join(v8, 'x64.release/icudtl.dat'), Copy("$TARGET", "$SOURCE"))
-else:
-	env.Command('icudtl.dat', os.path.join(v8, 'out/native/icudtl.dat'), Copy("$TARGET", "$SOURCE"))
+env.Command('icudtl.dat', os.path.join(v8, 'out/icudtl.dat'), Copy("$TARGET", "$SOURCE"))
 
 ldapEnv = env.Clone()
 if sys.platform == 'win32':
