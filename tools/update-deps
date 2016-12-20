@@ -34,7 +34,7 @@ if platform.machine() == 'armv7l':
 print 'Using', cores, 'cores.'
 
 def run(*args, **kw):
-	print 'Running:', args, kw
+	print 'Running:', args
 	subprocess.check_call(*args, **kw)
 
 def makeWritableAndRetry(function, path, exc_info):
@@ -124,7 +124,7 @@ def updateV8():
 	else:
 		run(['gclient' + extension, 'sync'], cwd=kV8Work)
 
-	run(['gn' + extension, 'gen', 'out', "--args=is_component_build=false"], cwd=kV8Work, env=win32Env)
+	run(['gn' + extension, 'gen', 'out', "--args=is_component_build=false treat_warnings_as_errors=false"], cwd=kV8Work, env=win32Env)
 	run(['ninja', '-C', 'out'], cwd=kV8Work)
 
 if __name__ == '__main__':
