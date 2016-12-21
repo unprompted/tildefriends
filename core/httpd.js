@@ -1,5 +1,7 @@
 "use strict";
 
+require("stringview");
+
 var gHandlers = [];
 var gSocketHandlers = [];
 
@@ -185,7 +187,7 @@ function handleRequest(request, response) {
 }
 
 function handleWebSocketRequest(request, response, client) {
-	var buffer = "";
+	var buffer = new Uint8Array(0);
 	var frame = "";
 	var frameOpCode = 0x0;
 
@@ -199,24 +201,30 @@ function handleWebSocketRequest(request, response, client) {
 		if (opCode === undefined) {
 			opCode = 0x2;
 		}
+		if (opCode == 0x1 && (typeof message == "string" || message instanceof String)) {
+			message = new StringView(message, "UTF-8").rawData;
+		}
 		var fin = true;
-		var packet = String.fromCharCode((fin ? (1 << 7) : 0) | (opCode & 0xf));
+		var packet = [(fin ? (1 << 7) : 0) | (opCode & 0xf)];
 		var mask = false;
 		if (message.length < 126) {
-			packet += String.fromCharCode((mask ? (1 << 7) : 0) | message.length);
+			packet.push((mask ? (1 << 7) : 0) | message.length);
 		} else if (message.length < (1 << 16)) {
-			packet += String.fromCharCode((mask ? (1 << 7) : 0) | 126);
-			packet += String.fromCharCode((message.length >> 8) & 0xff);
-			packet += String.fromCharCode(message.length & 0xff);
+			packet.push((mask ? (1 << 7) : 0) | 126);
+			packet.push((message.length >> 8) & 0xff);
+			packet.push(message.length & 0xff);
 		} else {
-			packet += String.fromCharCode((mask ? (1 << 7) : 0) | 127);
-			packet += String.fromCharCode((message.length >> 24) & 0xff);
-			packet += String.fromCharCode((message.length >> 16) & 0xff);
-			packet += String.fromCharCode((message.length >> 8) & 0xff);
-			packet += String.fromCharCode(message.length & 0xff);
+			packet.push((mask ? (1 << 7) : 0) | 127);
+			packet.push((message.length >> 24) & 0xff);
+			packet.push((message.length >> 16) & 0xff);
+			packet.push((message.length >> 8) & 0xff);
+			packet.push(message.length & 0xff);
 		}
-		packet += message;
-		return client.write(packet);
+
+		var array = new Uint8Array(packet.length + message.length);
+		array.set(packet, 0);
+		array.set(message, packet.length);
+		return client.write(array);
 	}
 	response.onMessage = null;
 
@@ -224,10 +232,14 @@ function handleWebSocketRequest(request, response, client) {
 
 	client.read(function(data) {
 		if (data) {
-			buffer += data;
+			var newBuffer = new Uint8Array(buffer.length + data.length);
+			newBuffer.set(buffer, 0);
+			newBuffer.set(data, buffer.length);
+			buffer = newBuffer;
+
 			if (buffer.length >= 2) {
-				var bits0 = buffer.charCodeAt(0);
-				var bits1 = buffer.charCodeAt(1);
+				var bits0 = buffer[0];
+				var bits1 = buffer[1];
 				if (bits1 & (1 << 7) == 0) {
 					// Unmasked message.
 					client.close();
@@ -241,26 +253,26 @@ function handleWebSocketRequest(request, response, client) {
 					payloadLength = 0;
 					for (var i = 0; i < 2; i++) {
 						payloadLength <<= 8;
-						payloadLength |= buffer.charCodeAt(2 + i);
+						payloadLength |= buffer[2 + i];
 					}
 					maskStart = 4;
 				} else if (payloadLength == 127) {
 					payloadLength = 0;
 					for (var i = 0; i < 8; i++) {
 						payloadLength <<= 8;
-						payloadLength |= buffer.charCodeAt(2 + i);
+						payloadLength |= buffer[2 + i];
 					}
 					maskStart = 10;
 				}
 				var havePayload = buffer.length >= payloadLength + 2 + 4;
 				if (havePayload) {
-					var mask = buffer.substring(maskStart, maskStart + 4);
+					var mask = buffer.slice(maskStart, maskStart + 4);
 					var dataStart = maskStart + 4;
 					var decoded = "";
-					var payload = buffer.substring(dataStart, dataStart + payloadLength);
-					buffer = buffer.substring(dataStart + payloadLength);
+					var payload = buffer.slice(dataStart, dataStart + payloadLength);
+					buffer = buffer.slice(dataStart + payloadLength);
 					for (var i = 0; i < payloadLength; i++) {
-						decoded += String.fromCharCode(payload.charCodeAt(i) ^ mask.charCodeAt(i % 4));
+						decoded += String.fromCharCode(payload[i] ^ mask[i % 4]);
 					}
 
 					frame += decoded;
@@ -319,7 +331,7 @@ function webSocketAcceptResponse(key) {
 }
 
 function handleConnection(client) {
-	var inputBuffer = "";
+	var inputBuffer = new Uint8Array(0);
 	var request;
 	var headers = {};
 	var lineByLine = true;
@@ -327,7 +339,7 @@ function handleConnection(client) {
 	var body;
 
 	function reset() {
-		inputBuffer = "";
+		inputBuffer = new Uint8Array(0);
 		request = undefined;
 		headers = {};
 		lineByLine = true;
@@ -350,6 +362,7 @@ function handleConnection(client) {
 
 	function handleLine(line, length) {
 		if (bodyToRead == -1) {
+			line = new StringView(line, "ASCII").toString();
 			if (!request) {
 				request = line.split(' ');
 				return true;
@@ -379,6 +392,7 @@ function handleConnection(client) {
 				}
 			}
 		} else {
+			line = new StringView(line, "UTF-8").toString();
 			body += line;
 			bodyToRead -= length;
 			if (bodyToRead <= 0) {
@@ -393,14 +407,21 @@ function handleConnection(client) {
 
 	client.read(function(data) {
 		if (data) {
-			inputBuffer += data;
+			var newBuffer = new Uint8Array(inputBuffer.length + data.length);
+			newBuffer.set(inputBuffer, 0);
+			newBuffer.set(data, inputBuffer.length);
+			inputBuffer = newBuffer;
+
+			var newLine = '\n'.charCodeAt(0);
+			var carriageReturn = '\r'.charCodeAt(0);
+
 			var more = true;
 			while (more) {
 				if (lineByLine) {
 					more = false;
-					var end = inputBuffer.indexOf('\n');
+					var end = inputBuffer.indexOf(newLine);
 					var realEnd = end;
-					if (end > 0 && inputBuffer[end - 1] == '\r') {
+					if (end > 0 && inputBuffer[end - 1] == carriageReturn) {
 						--end;
 					}
 					if (end != -1) {
@@ -410,7 +431,7 @@ function handleConnection(client) {
 					}
 				} else {
 					more = handleLine(inputBuffer, inputBuffer.length);
-					inputBuffer = "";
+					inputBuffer = new Uint8Array(0);
 				}
 			}
 		}

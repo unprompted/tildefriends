@@ -80,6 +80,13 @@ bool Serialize::storeInternal(Task* task, std::vector<char>& buffer, v8::Handle<
 		v8::String::Utf8Value utf8(value->ToString());
 		writeInt32(buffer, utf8.length());
 		buffer.insert(buffer.end(), *utf8, *utf8 + utf8.length());
+	} else if (value->IsUint8Array()) {
+		writeInt32(buffer, kUint8Array);
+		v8::Handle<v8::ArrayBuffer> array = v8::Handle<v8::ArrayBuffer>::Cast(value);
+		char* data = reinterpret_cast<char*>(array->GetContents().Data());
+		size_t length = array->GetContents().ByteLength();
+		writeInt32(buffer, length);
+		buffer.insert(buffer.end(), data, data + length);
 	} else if (value->IsArray()) {
 		writeInt32(buffer, kArray);
 		v8::Handle<v8::Array> array = v8::Handle<v8::Array>::Cast(value);
@@ -173,6 +180,15 @@ v8::Handle<v8::Value> Serialize::loadInternal(Task* task, TaskStub* from, const 
 				int32_t length = readInt32(buffer, offset);
 				result = v8::String::NewFromUtf8(task->getIsolate(), &*buffer.begin() + offset, v8::String::kNormalString, length);
 				offset += length;
+			}
+			break;
+		case kUint8Array:
+			{
+				int32_t length = readInt32(buffer, offset);
+				v8::Handle<v8::ArrayBuffer> array = v8::ArrayBuffer::New(task->getIsolate(), length);
+				std::memcpy(array->GetContents().Data(), &*buffer.begin() + offset, length);
+				offset += length;
+				result = v8::Uint8Array::New(array, 0, length);
 			}
 			break;
 		case kArray:

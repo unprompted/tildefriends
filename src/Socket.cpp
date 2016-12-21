@@ -442,11 +442,7 @@ void Socket::onRead(uv_stream_t* stream, ssize_t readSize, const uv_buf_t* buffe
 					char plain[8192];
 					int result = socket->_tls->readPlain(plain, sizeof(plain));
 					if (result > 0) {
-						v8::Local<v8::Function> callback = v8::Local<v8::Function>::New(socket->_task->getIsolate(), socket->_onRead);
-						if (!callback.IsEmpty()) {
-							data = v8::String::NewFromOneByte(socket->_task->getIsolate(), reinterpret_cast<const uint8_t*>(plain), v8::String::kNormalString, result);
-							callback->Call(callback, 1, &data);
-						}
+						socket->notifyDataRead(plain, result);
 					} else if (result == TlsSession::kReadFailed) {
 						socket->reportTlsErrors();
 						socket->close();
@@ -466,36 +462,52 @@ void Socket::onRead(uv_stream_t* stream, ssize_t readSize, const uv_buf_t* buffe
 					socket->processOutgoingTls();
 				}
 			} else {
-				v8::Local<v8::Function> callback = v8::Local<v8::Function>::New(socket->_task->getIsolate(), socket->_onRead);
-				if (!callback.IsEmpty()) {
-					data = v8::String::NewFromOneByte(socket->_task->getIsolate(), reinterpret_cast<const uint8_t*>(buffer->base), v8::String::kNormalString, readSize);
-					callback->Call(callback, 1, &data);
-				}
+				socket->notifyDataRead(buffer->base, readSize);
 			}
 		}
 	}
 	delete[] buffer->base;
 }
 
+void Socket::notifyDataRead(const char* data, size_t length) {
+	v8::Local<v8::Function> callback = v8::Local<v8::Function>::New(_task->getIsolate(), _onRead);
+	if (!callback.IsEmpty()) {
+		if (data && length > 0) {
+			v8::Handle<v8::ArrayBuffer> buffer = v8::ArrayBuffer::New(_task->getIsolate(), length);
+			std::memcpy(buffer->GetContents().Data(), data, length);
+			v8::Handle<v8::Uint8Array> array = v8::Uint8Array::New(buffer, 0, length);
+
+			v8::Handle<v8::Value> arguments = array;
+			callback->Call(callback, 1, &arguments);
+		}
+	}
+}
+
 void Socket::write(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	if (Socket* socket = Socket::get(args.Data())) {
 		promiseid_t promise = socket->_task->allocatePromise();
 		args.GetReturnValue().Set(socket->_task->getPromise(promise));
-		v8::Handle<v8::String> value = args[0].As<v8::String>();
-		if (!value.IsEmpty() && value->IsString()) {
+		v8::Handle<v8::Value> value = args[0];
+		if (!value.IsEmpty() && (value->IsString() || value->IsUint8Array())) {
 			if (socket->_tls) {
 				socket->reportTlsErrors();
 				int result;
 				int length;
-				if (value->ContainsOnlyOneByte()) {
-					length = value->Length();
-					std::vector<uint8_t> bytes(length);
-					value->WriteOneByte(bytes.data(), 0, bytes.size(), v8::String::NO_NULL_TERMINATION);
-					result = socket->_tls->writePlain(reinterpret_cast<const char*>(bytes.data()), bytes.size());
-				} else {
-					v8::String::Utf8Value utf8(value);
-					length = utf8.length();
-					result = socket->_tls->writePlain(*utf8, utf8.length());
+				if (value->IsArrayBufferView()) {
+					v8::Handle<v8::ArrayBufferView> array = v8::Handle<v8::ArrayBufferView>::Cast(value);
+					result = socket->_tls->writePlain(reinterpret_cast<const char*>(array->Buffer()->GetContents().Data()), array->Buffer()->GetContents().ByteLength());
+				} else if (value->IsString()) {
+					v8::Handle<v8::String> stringValue = v8::Handle<v8::String>::Cast(value);
+					if (stringValue->ContainsOnlyOneByte()) {
+						length = stringValue->Length();
+						std::vector<uint8_t> bytes(length);
+						stringValue->WriteOneByte(bytes.data(), 0, bytes.size(), v8::String::NO_NULL_TERMINATION);
+						result = socket->_tls->writePlain(reinterpret_cast<const char*>(bytes.data()), bytes.size());
+					} else {
+						v8::String::Utf8Value utf8(stringValue);
+						length = utf8.length();
+						result = socket->_tls->writePlain(*utf8, utf8.length());
+					}
 				}
 				char buffer[8192];
 				if (result <= 0 && socket->_tls->getError(buffer, sizeof(buffer))) {
@@ -507,18 +519,26 @@ void Socket::write(const v8::FunctionCallbackInfo<v8::Value>& args) {
 				}
 				socket->processOutgoingTls();
 			} else {
-				v8::String::Utf8Value utf8(value);
 				int length;
 				char* rawBuffer = 0;
-				if (value->ContainsOnlyOneByte()) {
-					length = value->Length();
+				v8::Handle<v8::String> stringValue = v8::Handle<v8::String>::Cast(value);
+				if (stringValue->IsArrayBufferView()) {
+					v8::Handle<v8::ArrayBufferView> array = v8::Handle<v8::ArrayBufferView>::Cast(value);
+					length = array->Buffer()->GetContents().ByteLength();
 					rawBuffer = new char[sizeof(uv_write_t) + length];
-					value->WriteOneByte(reinterpret_cast<uint8_t*>(rawBuffer) + sizeof(uv_write_t), 0, length, v8::String::NO_NULL_TERMINATION);
-				} else {
-					v8::String::Utf8Value utf8(value);
-					length = utf8.length();
-					rawBuffer = new char[sizeof(uv_write_t) + length];
-					std::memcpy(rawBuffer + sizeof(uv_write_t), *utf8, length);
+					std::memcpy(rawBuffer + sizeof(uv_write_t), array->Buffer()->GetContents().Data(), length);
+				} else if (value->IsString()) {
+					v8::String::Utf8Value utf8(stringValue);
+					if (stringValue->ContainsOnlyOneByte()) {
+						length = stringValue->Length();
+						rawBuffer = new char[sizeof(uv_write_t) + length];
+						stringValue->WriteOneByte(reinterpret_cast<uint8_t*>(rawBuffer) + sizeof(uv_write_t), 0, length, v8::String::NO_NULL_TERMINATION);
+					} else {
+						v8::String::Utf8Value utf8(stringValue);
+						length = utf8.length();
+						rawBuffer = new char[sizeof(uv_write_t) + length];
+						std::memcpy(rawBuffer + sizeof(uv_write_t), *utf8, length);
+					}
 				}
 				uv_write_t* request = reinterpret_cast<uv_write_t*>(rawBuffer);
 

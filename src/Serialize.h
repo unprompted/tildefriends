@@ -38,6 +38,7 @@ private:
 		kNumber,
 		kString,
 		kArray,
+		kUint8Array,
 		kObject,
 		kFunction,
 		kError,

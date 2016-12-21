@@ -42,15 +42,16 @@ def indent(text):
 passCount = 0
 failCount = 0
 
-for test in selectedTests:
+for test in sorted(selectedTests):
 	if os.path.isdir(tmp):
 		shutil.rmtree(tmp)
 	if not os.path.isdir(tmp):
 		os.makedirs(tmp)
 
 	process = subprocess.Popen(['bash', test], stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=tmp, env=env)
+	interrupted = False
 	stdout, stderr = process.communicate()
-	if process.returncode == 0:
+	if interrupted or process.returncode == 0:
 		if stdout.strip() == "SKIP":
 			print 'SKIPPED', test
 		else:

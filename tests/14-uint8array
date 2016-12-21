@@ -1,0 +1,38 @@
+#!/bin/bash
+
+cat > test.js << EOF
+var task = new Task();
+task.onExit = function() {
+	print("child exited");
+};
+task.activate();
+task.execute({name: "child.js", source: File.readFile("child.js")}).then(async function() {
+	print("child started");
+	var input = new ArrayBuffer(10);
+	for (var i = 0; i < 10; i++) {
+		input[i] = i;
+	}
+	var test = (await task.getExports()).test;
+	var output = await test(input);
+	print("input", input);
+	print("output", output);
+	for (var i = 0; i < 10; i++) {
+		print(output[i]);
+		if (output[i] != i) {
+			print("output[" + i + "] == " + output[i]);
+			exit(1);
+		}
+	}
+	exit(0);
+});
+EOF
+
+cat > child.js << EOF
+exports = {
+	test: function(data) {
+		return data;
+	}
+}
+EOF
+
+$TILDEFRIENDS test.js
