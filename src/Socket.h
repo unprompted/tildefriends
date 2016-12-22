@@ -75,6 +75,8 @@ private:
 	static void onRelease(const v8::WeakCallbackInfo<Socket>& data);
 
 	void notifyDataRead(const char* data, size_t length);
+	int writeBytes(std::function<int(const char*, size_t)> callback, v8::Handle<v8::Value> value, int* outLength);
+	int writeInternal(promiseid_t promise, const char* data, size_t length);
 	void processTlsShutdown(promiseid_t promise);
 	static void onTlsShutdown(uv_write_t* request, int status);
 	void shutdownInternal(promiseid_t promise);
