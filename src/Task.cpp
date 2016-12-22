@@ -146,7 +146,7 @@ v8::Handle<v8::String> Task::loadFile(v8::Isolate* isolate, const char* fileName
 		char* buffer = new char[fileSize];
 		file.read(buffer, fileSize);
 		std::string contents(buffer, buffer + fileSize);
-		value = v8::String::NewFromOneByte(isolate, reinterpret_cast<const uint8_t*>(buffer), v8::String::kNormalString, fileSize);
+		value = v8::String::NewFromUtf8(isolate, buffer, v8::String::kNormalString, fileSize);
 		delete[] buffer;
 	}
 	return value;

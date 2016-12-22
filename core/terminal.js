@@ -1,14 +1,14 @@
 "use strict";
 
 var kStaticFiles = [
-	{uri: '', path: 'index.html', type: 'text/html; charset=utf-8'},
-	{uri: '/edit', path: 'edit.html', type: 'text/html; charset=utf-8'},
-	{uri: '/style.css', path: 'style.css', type: 'text/css; charset=utf-8'},
+	{uri: '', path: 'index.html', type: 'text/html; charset=UTF-8'},
+	{uri: '/edit', path: 'edit.html', type: 'text/html; charset=UTF-8'},
+	{uri: '/style.css', path: 'style.css', type: 'text/css; charset=UTF-8'},
 	{uri: '/favicon.png', path: 'favicon.png', type: 'image/png'},
-	{uri: '/client.js', path: 'client.js', type: 'text/javascript; charset=utf-8'},
-	{uri: '/editor.js', path: 'editor.js', type: 'text/javascript; charset=utf-8'},
+	{uri: '/client.js', path: 'client.js', type: 'text/javascript; charset=UTF-8'},
+	{uri: '/editor.js', path: 'editor.js', type: 'text/javascript; charset=UTF-8'},
 	{uri: '/agplv3-88x31.png', path: 'agplv3-88x31.png', type: 'image/png'},
-	{uri: '/robots.txt', path: 'robots.txt', type: 'text/plain; charset=utf-8'},
+	{uri: '/robots.txt', path: 'robots.txt', type: 'text/plain; charset=UTF-8'},
 ];
 
 var auth = require('auth');
@@ -240,7 +240,7 @@ function handler(request, response, packageOwner, packageName, uri) {
 		for (var i in kStaticFiles) {
 			if (uri === kStaticFiles[i].uri) {
 				found = true;
-				var data = File.readFile("core/" + kStaticFiles[i].path);
+				var data = new TextDecoder("UTF-8").decode(File.readFile("core/" + kStaticFiles[i].path));
 				if (kStaticFiles[i].uri == "") {
 					if (gGlobalSettings && gGlobalSettings['google-signin-client_id']) {
 						data = data.replace("<!--HEAD-->", `
@@ -250,14 +250,15 @@ function handler(request, response, packageOwner, packageName, uri) {
 					data = data.replace("$(VIEW_SOURCE)", "/~" + packageOwner + "/" + packageName + "/view");
 					data = data.replace("$(EDIT_SOURCE)", "/~" + packageOwner + "/" + packageName + "/edit");
 				} else if (kStaticFiles[i].uri == "/edit") {
-					var source = File.readFile("packages/" + packageOwner + "/" + packageName + "/" + packageName + ".js") || "";
+					var source = new TextDecoder("UTF-8").decode(File.readFile("packages/" + packageOwner + "/" + packageName + "/" + packageName + ".js")) || "";
 					source = source.replace(/([&<>"])/g, function(x, item) {
 						return {'&': '&amp;', '"': '&quot;', '<': '&lt;', '>': '&gt;'}[item];
 					});
 					data = data.replace("$(SOURCE)", source);
 				}
-				response.writeHead(200, {"Content-Type": kStaticFiles[i].type, "Content-Length": data.length});
-				response.end(data);
+				var raw = new TextEncoder("UTF-8").encode(data);
+				response.writeHead(200, {"Content-Type": kStaticFiles[i].type, "Content-Length": raw.length});
+				response.end(raw);
 				break;
 			}
 		}
@@ -266,7 +267,7 @@ function handler(request, response, packageOwner, packageName, uri) {
 	if (!found) {
 		var process;
 		if (uri === "/view") {
-			var data = File.readFile("packages/" + packageOwner + "/" + packageName + "/" + packageName + ".js");
+			var data = new TextDecode("UTF-8").decode(File.readFile("packages/" + packageOwner + "/" + packageName + "/" + packageName + ".js"));
 			response.writeHead(200, {"Content-Type": "text/javascript; charset=utf-8", "Content-Length": data.length});
 			response.end(data);
 		} else if (uri == "/save") {

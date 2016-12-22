@@ -34,32 +34,39 @@ void File::readFile(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	std::streampos fileSize = file.tellg();
 	if (fileSize >= 0 && fileSize < 4 * 1024 * 1024) {
 		file.seekg(0, std::ios_base::beg);
-		char* buffer = new char[fileSize];
-		file.read(buffer, fileSize);
-		std::string contents(buffer, buffer + fileSize);
-		args.GetReturnValue().Set(v8::String::NewFromOneByte(args.GetIsolate(), reinterpret_cast<const uint8_t*>(buffer), v8::String::kNormalString, fileSize));
-		delete[] buffer;
+		v8::Handle<v8::ArrayBuffer> buffer = v8::ArrayBuffer::New(args.GetIsolate(), fileSize);
+		file.read(reinterpret_cast<char*>(buffer->GetContents().Data()), fileSize);
+		v8::Handle<v8::Uint8Array> array = v8::Uint8Array::New(buffer, 0, fileSize);
+		args.GetReturnValue().Set(array);
 	}
 }
 
 void File::writeFile(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	v8::HandleScope scope(args.GetIsolate());
 	v8::Handle<v8::String> fileName = args[0]->ToString();
-	v8::Handle<v8::String> contents = args[1]->ToString();
+	v8::Handle<v8::Value> value = args[1];
 
 	v8::String::Utf8Value utf8FileName(fileName);
 	std::ofstream file(*utf8FileName, std::ios_base::out | std::ios_base::binary);
 
-	if (contents->ContainsOnlyOneByte()) {
-		std::vector<uint8_t> bytes(contents->Length());
-		contents->WriteOneByte(bytes.data(), 0, bytes.size(), v8::String::NO_NULL_TERMINATION);
-		if (!file.write(reinterpret_cast<const char*>(bytes.data()), bytes.size())) {
+	if (value->IsArrayBufferView()) {
+		v8::Handle<v8::ArrayBufferView> array = v8::Handle<v8::ArrayBufferView>::Cast(value);
+		if (!file.write(reinterpret_cast<const char*>(array->Buffer()->GetContents().Data()), array->Buffer()->GetContents().ByteLength())) {
 			args.GetReturnValue().Set(v8::Integer::New(args.GetIsolate(), -1));
 		}
-	} else {
-		v8::String::Utf8Value utf8Contents(contents);
-		if (!file.write(*utf8Contents, utf8Contents.length())) {
-			args.GetReturnValue().Set(v8::Integer::New(args.GetIsolate(), -1));
+	} else if (value->IsString()) {
+		v8::Handle<v8::String> stringValue = v8::Handle<v8::String>::Cast(value);
+		if (stringValue->ContainsOnlyOneByte()) {
+			std::vector<uint8_t> bytes(stringValue->Length());
+			stringValue->WriteOneByte(bytes.data(), 0, bytes.size(), v8::String::NO_NULL_TERMINATION);
+			if (!file.write(reinterpret_cast<const char*>(bytes.data()), bytes.size())) {
+				args.GetReturnValue().Set(v8::Integer::New(args.GetIsolate(), -1));
+			}
+		} else {
+			v8::String::Utf8Value utf8Contents(stringValue);
+			if (!file.write(*utf8Contents, utf8Contents.length())) {
+				args.GetReturnValue().Set(v8::Integer::New(args.GetIsolate(), -1));
+			}
 		}
 	}
 }

@@ -16,7 +16,7 @@ File.makeDirectory("data/auth/db");
 var gDatabase = new Database("data/auth/db");
 
 try {
-	gAccounts = JSON.parse(File.readFile(kAccountsFile));
+	gAccounts = JSON.parse(new TextDecoder("UTF-8").decode(File.readFile(kAccountsFile)));
 } catch (error) {
 }
 
@@ -131,7 +131,7 @@ function authHandler(request, response) {
 			response.writeHead(303, {"Location": formData.return, "Set-Cookie": cookie});
 			response.end();
 		} else {
-			var html = File.readFile("core/auth.html");
+			var html = new TextDecoder("UTF-8").decode(File.readFile("core/auth.html"));
 			var contents = "";
 
 			if (entry) {

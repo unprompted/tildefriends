@@ -1,7 +1,5 @@
 "use strict";
 
-require("stringview");
-
 var gHandlers = [];
 var gSocketHandlers = [];
 
@@ -188,7 +186,7 @@ function handleRequest(request, response) {
 
 function handleWebSocketRequest(request, response, client) {
 	var buffer = new Uint8Array(0);
-	var frame = "";
+	var frame = new Uint8Array(0);
 	var frameOpCode = 0x0;
 
 	var handler = findSocketHandler(request);
@@ -202,7 +200,7 @@ function handleWebSocketRequest(request, response, client) {
 			opCode = 0x2;
 		}
 		if (opCode == 0x1 && (typeof message == "string" || message instanceof String)) {
-			message = new StringView(message, "UTF-8").rawData;
+			message = new TextEncoder("UTF-8").encode(message);
 		}
 		var fin = true;
 		var packet = [(fin ? (1 << 7) : 0) | (opCode & 0xf)];
@@ -268,14 +266,18 @@ function handleWebSocketRequest(request, response, client) {
 				if (havePayload) {
 					var mask = buffer.slice(maskStart, maskStart + 4);
 					var dataStart = maskStart + 4;
-					var decoded = "";
+					var decoded = new Array(payloadLength);
 					var payload = buffer.slice(dataStart, dataStart + payloadLength);
 					buffer = buffer.slice(dataStart + payloadLength);
 					for (var i = 0; i < payloadLength; i++) {
-						decoded += String.fromCharCode(payload[i] ^ mask[i % 4]);
+						decoded[i] = payload[i] ^ mask[i % 4];
 					}
 
-					frame += decoded;
+					var newBuffer = new Uint8Array(frame.length + decoded.length);
+					newBuffer.set(frame, 0);
+					newBuffer.set(decoded, frame.length);
+					frame = newBuffer;
+
 					if (opCode) {
 						frameOpCode = opCode;
 					}
@@ -283,11 +285,11 @@ function handleWebSocketRequest(request, response, client) {
 					if (fin) {
 						if (response.onMessage) {
 							response.onMessage({
-								data: frame,
+								data: frameOpCode == 0x1 ? new TextDecoder("UTF-8").decode(frame) : frame,
 								opCode: frameOpCode,
 							});
 						}
-						frame = "";
+						frame = new Uint8Array(0);
 					}
 				}
 			}
@@ -362,7 +364,7 @@ function handleConnection(client) {
 
 	function handleLine(line, length) {
 		if (bodyToRead == -1) {
-			line = new StringView(line, "ASCII").toString();
+			line = new TextDecoder("ASCII").decode(line);
 			if (!request) {
 				request = line.split(' ');
 				return true;
@@ -392,7 +394,7 @@ function handleConnection(client) {
 				}
 			}
 		} else {
-			line = new StringView(line, "UTF-8").toString();
+			line = new TextDecoder("UTF-8").decode(line);
 			body += line;
 			bodyToRead -= length;
 			if (bodyToRead <= 0) {
@@ -454,8 +456,8 @@ socket.bind(kHost, kHttpPort).then(function() {
 	logError("[" + new Date() + "] " + error);
 });
 
-var privateKey = File.readFile("data/httpd/privatekey.pem");
-var certificate = File.readFile("data/httpd/certificate.pem");
+var privateKey = new TextDecoder("ASCII").decode(File.readFile("data/httpd/privatekey.pem"));
+var certificate = new TextDecoder("ASCII").decode(File.readFile("data/httpd/certificate.pem"));
 
 if (privateKey && certificate) {
 	var tls = new TlsContext();

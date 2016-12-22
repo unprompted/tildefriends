@@ -1,5 +1,9 @@
 "use strict";
 
+
+require("encoding-indexes");
+require("encoding");
+
 var terminal = require("terminal");
 var auth = require("auth");
 var network = require("network");
@@ -188,9 +192,13 @@ function badName(name) {
 	return bad;
 }
 
+function readFileUtf8(fileName) {
+	return new TextDecoder("UTF-8").decode(File.readFile(fileName));
+}
+
 function getManifest(fileName) {
 	let manifest = [];
-	let lines = File.readFile(fileName).split("\n").map(x => x.trimRight());
+	let lines = readFileUtf8(fileName).split("\n").map(x => x.trimRight());
 	for (let i = 0; i < lines.length; i++) {
 		if (lines[i].substring(0, 4) == "//! ") {
 			manifest.push(lines[i].substring(4));
@@ -339,7 +347,7 @@ function getProcess(packageOwner, packageName, key, options) {
 				let source = {};
 				for (let i in manifest.require) {
 					let name = manifest.require[i];
-					source[name] = File.readFile("packages/" + process.packageOwner + "/" + name + "/" + name + ".js");
+					source[name] = readFileUtf8("packages/" + process.packageOwner + "/" + name + "/" + name + ".js");
 				}
 				process.task.setRequires(source);
 			}
@@ -347,7 +355,7 @@ function getProcess(packageOwner, packageName, key, options) {
 			print("Activating task");
 			process.task.activate();
 			print("Executing task");
-			process.task.execute({name: fileName, source: File.readFile(fileName)}).then(function() {
+			process.task.execute({name: fileName, source: readFileUtf8(fileName)}).then(function() {
 				print("Task ready");
 				broadcastEvent('onSessionBegin', [getUser(process, process)]);
 				resolveReady(process);
@@ -404,7 +412,7 @@ function setGlobalSettings(settings) {
 }
 
 try {
-	gGlobalSettings = JSON.parse(File.readFile(kGlobalSettingsFile));
+	gGlobalSettings = JSON.parse(readFileUtf8(kGlobalSettingsFile));
 } catch (error) {
 	print("Error loading settings from " + kGlobalSettingsFile + ": " + error);
 }
