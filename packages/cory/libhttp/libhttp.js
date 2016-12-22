@@ -5,12 +5,14 @@
 function parseUrl(url) {
 	// XXX: Hack.
 	var match = url.match(new RegExp("(\\w+)://([^/]+)?(.*)"));
-	return {
-		protocol: match[1],
-		host: match[2],
-		path: match[3],
-		port: match[1] == "http" ? 80 : 443,
-	};
+	if (match) {
+		return {
+			protocol: match[1],
+			host: match[2],
+			path: match[3],
+			port: match[1] == "http" ? 80 : 443,
+		};
+	}
 }
 
 function parseResponse(data) {
@@ -37,6 +39,9 @@ function get(url) {
 	return new Promise(async function(resolve, reject) {
 		try {
 			let parsed = parseUrl(url);
+			if (!parsed) {
+				throw new Error("Failed to parse: " + url);
+			}
 			let buffer = "";
 
 			let socket = await network.newConnection();

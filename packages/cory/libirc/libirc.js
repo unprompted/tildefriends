@@ -172,6 +172,7 @@ class IrcService {
 		this._send("QUIT");
 		this._socket.close();
 		this._service.notifyStateChanged("disconnected");
+		exit(0);
 	}
 };
 

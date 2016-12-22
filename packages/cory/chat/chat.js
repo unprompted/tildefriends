@@ -328,6 +328,7 @@ function getConversation(session, conversationName) {
 }
 
 async function printToConversation(conversation, message, notify) {
+	print(message);
 	if (conversation == gCurrentConversation) {
 		if (message.action == "message") {
 			await printMessage(message.message);
@@ -409,26 +410,26 @@ function niceTime(lastTime, thisTime) {
 async function formatMessage(message) {
 	var result;
 	if (typeof message == "string") {
-		for (let i = 0; i < message.length; i++) {
-			if (message.charCodeAt(i) >= 128 /*&& message.charCodeAt(i) < 256*/) {
-				message = message.substring(0, i) + "?" + message.substring(i + 1);
+		for (let i = message.length - 1; i >= 0; i--) {
+			if (message.charCodeAt(i) >= 128 || message.charCodeAt(i) < 32) {
+				message = message.substring(0, i) + "\\" + message.charCodeAt(i).toString() + message.substring(i + 1);
 			}
 		}
 		result = [];
 		var regex = /(\w+:\/*\S+?)(?=(?:[\.!?])?(?:$|\s))/gi;
 		var match;
 		var lastIndex = 0;
-		let libunfurl;
+//		let libunfurl;
 		while ((match = regex.exec(message)) !== null) {
-			if (!libunfurl) {
-				libunfurl = await core.getService("libunfurl", "libunfurl");
-			}
+//			if (!libunfurl) {
+//				libunfurl = await core.getService("libunfurl", "libunfurl");
+//			}
 			result.push({class: "base1", value: message.substring(lastIndex, match.index)});
-			if (!libunfurl) {
+//			if (!libunfurl) {
 				result.push({href: match[0]});
-			} else {
-				result.push(await libunfurl.postMessage(match[0]));
-			}
+//			} else {
+//				result.push(await libunfurl.postMessage(match[0]));
+//			}
 			lastIndex = regex.lastIndex;
 		}
 		result.push({class: "base1", value: message.substring(lastIndex)});

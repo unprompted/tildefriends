@@ -65,13 +65,10 @@ core.register("onMessage", async function(sender, message) {
 	if (gCache[message] && new Date().valueOf() < gCache[message].expires) {
 		result = gCache[message].result;
 	} else {
-		if (gCache[message]) {
-			print("Didn't use", gCache[message]);
-		}
 		try {
 			result = await unfurl(message);
 		} catch (error) {
-			result = [message, "(error retrieving: ", error, ")"];
+			result = [{href: message}, " (error retrieving: ", error, ")"];
 		}
 		gCache[message] = {
 			expires: new Date().valueOf() + 7 * 24 * 60 * 60 * 1000,
