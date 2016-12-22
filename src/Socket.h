@@ -1,6 +1,7 @@
 #ifndef INCLUDED_Socket
 #define INCLUDED_Socket
 
+#include <functional>
 #include <string>
 #include <uv.h>
 #include <v8.h>

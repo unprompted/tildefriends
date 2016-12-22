@@ -1,6 +1,5 @@
 "use strict";
 
-
 require("encoding-indexes");
 require("encoding");
 

@@ -82,9 +82,9 @@ bool Serialize::storeInternal(Task* task, std::vector<char>& buffer, v8::Handle<
 		buffer.insert(buffer.end(), *utf8, *utf8 + utf8.length());
 	} else if (value->IsUint8Array()) {
 		writeInt32(buffer, kUint8Array);
-		v8::Handle<v8::ArrayBuffer> array = v8::Handle<v8::ArrayBuffer>::Cast(value);
-		char* data = reinterpret_cast<char*>(array->GetContents().Data());
-		size_t length = array->GetContents().ByteLength();
+		v8::Handle<v8::Uint8Array> array = v8::Handle<v8::Uint8Array>::Cast(value);
+		char* data = reinterpret_cast<char*>(array->Buffer()->GetContents().Data());
+		size_t length = array->Buffer()->GetContents().ByteLength();
 		writeInt32(buffer, length);
 		buffer.insert(buffer.end(), data, data + length);
 	} else if (value->IsArray()) {

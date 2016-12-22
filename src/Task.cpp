@@ -676,9 +676,20 @@ void Task::onReceivePacket(int packetType, const char* begin, size_t length, voi
 			tryCatch.SetVerbose(true);
 			v8::Handle<v8::Value> value = Serialize::load(to, from, std::vector<char>(begin + sizeof(promiseid_t), begin + length));
 			v8::Handle<v8::Object> object = v8::Handle<v8::Object>::Cast(value);
-			v8::Handle<v8::String> source = v8::Handle<v8::String>::Cast(object->Get(v8::String::NewFromUtf8(to->_isolate, "source")));
+			v8::Handle<v8::Value> source = v8::Handle<v8::Value>::Cast(object->Get(v8::String::NewFromUtf8(to->_isolate, "source")));
+			v8::Handle<v8::String> stringSource;
+			if (source->IsArrayBufferView()) {
+				v8::Handle<v8::ArrayBufferView> array = v8::Handle<v8::ArrayBufferView>::Cast(source);
+				stringSource = v8::String::NewFromUtf8(
+					to->_isolate,
+					reinterpret_cast<const char*>(array->Buffer()->GetContents().Data()),
+					v8::String::kNormalString,
+					array->Buffer()->GetContents().ByteLength());
+			} else if (source->IsString()) {
+				stringSource = v8::Handle<v8::String>::Cast(source);
+			}
 			v8::Handle<v8::String> name = v8::Handle<v8::String>::Cast(object->Get(v8::String::NewFromUtf8(to->_isolate, "name")));
-			to->executeSource(source, name);
+			to->executeSource(stringSource, name);
 			if (tryCatch.HasCaught()) {
 				sendPromiseReject(to, from, promise, Serialize::store(to, tryCatch));
 			}
