@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import os
+import platform
 import sys
 
 options = Variables('options.cache', ARGUMENTS)
@@ -29,13 +30,25 @@ env.Append(CPPPATH=[
 ])
 
 objectSuffix = '.obj' if sys.platform == 'win32' else '.o'
-libObjects += Glob(os.path.join(v8, 'out', 'obj', 'v8_base', '*' + objectSuffix))
-libObjects += Glob(os.path.join(v8, 'out', 'obj', 'v8_libbase', '*' + objectSuffix))
-libObjects += Glob(os.path.join(v8, 'out', 'obj', 'v8_libsampler', '*' + objectSuffix))
-libObjects += Glob(os.path.join(v8, 'out', 'obj', 'v8_libplatform', '*' + objectSuffix))
-libObjects += Glob(os.path.join(v8, 'out', 'obj', 'v8_nosnapshot', '*' + objectSuffix))
-libObjects += Glob(os.path.join(v8, 'out', 'obj', 'third_party', 'icu', 'icui18n', '*' + objectSuffix))
-libObjects += Glob(os.path.join(v8, 'out', 'obj', 'third_party', 'icu', 'icuuc', '*' + objectSuffix))
+raspi = platform.machine() == 'armv7l'
+if raspi:
+	libObjects += [
+		os.path.join(v8, 'out', 'arm.release', 'obj.target', 'src', 'libv8_libplatform.a'),
+		os.path.join(v8, 'out', 'arm.release', 'obj.target', 'src', 'libv8_base.a'),
+		os.path.join(v8, 'out', 'arm.release', 'obj.target', 'src', 'libv8_libbase.a'),
+		os.path.join(v8, 'out', 'arm.release', 'obj.target', 'src', 'libv8_libsampler.a'),
+		os.path.join(v8, 'out', 'arm.release', 'obj.target', 'src', 'libv8_nosnapshot.a'),
+		os.path.join(v8, 'out', 'arm.release', 'obj.target', 'third_party', 'icu', 'libicui18n.a'),
+		os.path.join(v8, 'out', 'arm.release', 'obj.target', 'third_party', 'icu', 'libicuuc.a'),
+	]
+else:
+	libObjects += Glob(os.path.join(v8, 'out', 'obj', 'v8_base', '*' + objectSuffix))
+	libObjects += Glob(os.path.join(v8, 'out', 'obj', 'v8_libbase', '*' + objectSuffix))
+	libObjects += Glob(os.path.join(v8, 'out', 'obj', 'v8_libsampler', '*' + objectSuffix))
+	libObjects += Glob(os.path.join(v8, 'out', 'obj', 'v8_libplatform', '*' + objectSuffix))
+	libObjects += Glob(os.path.join(v8, 'out', 'obj', 'v8_nosnapshot', '*' + objectSuffix))
+	libObjects += Glob(os.path.join(v8, 'out', 'obj', 'third_party', 'icu', 'icui18n', '*' + objectSuffix))
+	libObjects += Glob(os.path.join(v8, 'out', 'obj', 'third_party', 'icu', 'icuuc', '*' + objectSuffix))
 
 if sys.platform == 'win32':
 	env.Append(LIBS=['libuv', 'advapi32', 'winmm', 'wsock32', 'ws2_32', 'psapi', 'iphlpapi', 'userenv', 'user32', 'dbghelp', 'shlwapi'])
@@ -62,7 +75,7 @@ else:
 		os.path.join(uv, 'out/Debug/obj.target'),
 	])
 
-env.Command('icudtl.dat', os.path.join(v8, 'out/icudtl.dat'), Copy("$TARGET", "$SOURCE"))
+env.Command('icudtl.dat', os.path.join(v8, 'out/arm.release/icudtl.dat' if raspi else 'out/icudtl.dat'), Copy("$TARGET", "$SOURCE"))
 
 ldapEnv = env.Clone()
 if sys.platform == 'win32':
