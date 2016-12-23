@@ -15,7 +15,8 @@
 //! 		]
 //! 	},
 //! 	"require": [
-//! 		"libchat"
+//! 		"libchat",
+//! 		"libencoding"
 //! 	]
 //! }
 
@@ -683,6 +684,7 @@ XmlStanzaParser.prototype.parseNode = function(node) {
 // end xmpp.js
 
 let ChatService = require("libchat").ChatService;
+require("libencoding");
 
 var gPingCount = 0;
 
@@ -735,10 +737,12 @@ class XmppService {
 			self._socket.onError(self._reportError);
 			self._socket.read(function(data) {
 				try {
+					print(data.__prototype__ ? "YEAH!" : "nope");
 					if (!data) {
 						self._service.notifyStateChanged("disconnected");
 						return;
 					}
+					data = new TextDecoder("UTF-8").decode(new Uint8Array(Object.values(data)));
 					parse.parse(data).forEach(function(stanza) {
 						if (stanza.name == "stream:features") {
 							if (!started) {
