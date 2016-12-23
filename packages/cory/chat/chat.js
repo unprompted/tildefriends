@@ -169,7 +169,6 @@ function connect(id) {
 				break;
 			}
 		}
-		print(id, account);
 
 		if (account) {
 			let self = {account: account};
@@ -431,14 +430,23 @@ function printMessage(message) {
 	var now = message.timestamp || new Date().toString();
 	var from = message.from || "unknown";
 
-	terminal.print(
-		{class: "base0", value: niceTime(lastTimestamp, now)},
-		" ",
-		{class: "base00", value: "<"},
-		{class: "base3", value: from},
-		{class: "base00", value: ">"},
-		" ",
-		formatMessage(message.message));
+	if (message.action) {
+		terminal.print(
+			{class: "base0", value: niceTime(lastTimestamp, now)},
+			" * ",
+			{class: "base3", value: from},
+			" ",
+			formatMessage(message.message));
+	} else {
+		terminal.print(
+			{class: "base0", value: niceTime(lastTimestamp, now)},
+			" ",
+			{class: "base00", value: "<"},
+			{class: "base3", value: from},
+			{class: "base00", value: ">"},
+			" ",
+			formatMessage(message.message));
+	}
 	lastTimestamp = now;
 }
 

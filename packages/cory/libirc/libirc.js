@@ -73,11 +73,19 @@ class IrcService {
 				} else if (prefix.indexOf('!') != -1) {
 					conversation = prefix.split('!')[0];
 				}
-				this._service.notifyMessageReceived(conversation, {
+				let message = {
 					from: prefix.split('!')[0],
 					message: parts[parts.length - 1],
 					type: parts[0],
-				});
+				};
+				if (message.message.length > 2 && message.message.charCodeAt(0) == 1 && message.message.charCodeAt(message.message.length - 1) == 1) {
+					message.ctcp = true;
+					if (message.message.substring(1, 1 + "ACTION ".length) == "ACTION ") {
+						message.action = true;
+						message.message = message.message.substring(1 + "ACTION ".length, message.message.length - 1);
+					}
+				}
+				this._service.notifyMessageReceived(conversation, message);
 			} else if (parts[0] == "PING") {
 				parts[0] = "PONG";
 				this._send(parts.join(" "));
