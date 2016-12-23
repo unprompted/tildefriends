@@ -18,11 +18,13 @@
 //! 		]
 //! 	},
 //! 	"require": [
-//! 		"libchat"
+//! 		"libchat",
+//! 		"libencoding"
 //! 	]
 //! }
 
 let ChatService = require("libchat").ChatService;
+require("libencoding");
 
 class IrcService {
 	constructor(options) {
@@ -38,24 +40,13 @@ class IrcService {
 		});
 	}
 
-	_decode(text) {
-		if (text) {
-			for (let i = 0; i < text.length; i++) {
-				if (text.charCodeAt(i) > 128) {
-					text = text.substring(0, i) + "?" + text.substring(i + 1);
-				}
-			}
-		}
-		return text;
-	}
-
 	_send(line) {
 		return this._socket.write(line + "\r\n");
 	}
 
 	_receivedLine(originalLine) {
 		try {
-			let line = this._decode(originalLine);
+			let line = originalLine;
 			let prefix;
 			if (line.charAt(0) == ":") {
 				let space = line.indexOf(" ");
@@ -134,19 +125,23 @@ class IrcService {
 	_connect(options) {
 		let self = this;
 
-		let readBuffer = "";
+		let kNewLine = '\n'.charCodeAt(0);
+		let kCarriageReturn = '\r'.charCodeAt(0);
+
+		let readBuffer = new Uint8Array(0);
 		self._socket.read(function(data) {
 			if (data) {
-				readBuffer += data;
-				let end = readBuffer.indexOf("\n");
+				let newBuffer = new Uint8Array(readBuffer.length + data.length);
+				newBuffer.set(readBuffer, 0);
+				newBuffer.set(data, readBuffer.length);
+				readBuffer = newBuffer;
+
+				let end = readBuffer.indexOf(kNewLine);
 				while (end != -1) {
-					let line = readBuffer.substring(0, end);
-					if (line.charAt(line.length - 1) == "\r") {
-						line = line.substring(0, line.length - 1);
-					}
-					readBuffer = readBuffer.substring(end + 1);
-					self._receivedLine(line);
-					end = readBuffer.indexOf("\n");
+					let line = readBuffer.slice(0, (end > 0 && readBuffer[end - 1] == kCarriageReturn) ? end - 1 : end);
+					readBuffer = readBuffer.slice(end + 1);
+					self._receivedLine(new TextDecoder("UTF-8").decode(line));
+					end = readBuffer.indexOf(kNewLine);
 				}
 			} else {
 				self._service.notifyStateChanged("disconnected");

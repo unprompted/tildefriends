@@ -67,8 +67,8 @@ function addAccount() {
 	return database.get(kAccountsKey).then(function(data) {
 		let accounts = data ? JSON.parse(data) : [];
 		let id = 0;
-		for (var i in accounts) {
-			id = Math.max(id, accounts[i].id + 1);
+		while (accounts.some(x => x.id == id)) {
+			id++;
 		}
 		accounts.push({name: "unnamed", id: id});
 		return database.set(kAccountsKey, JSON.stringify(accounts));
@@ -150,7 +150,7 @@ function deleteAccount(id) {
 	return database.get(kAccountsKey).then(function(data) {
 		let accounts = data ? JSON.parse(data) : [];
 		for (var i = 0; i < accounts.length; i++) {
-			if (accounts[i] && (!accounts[i].id || accounts[i].id == id)) {
+			if (accounts[i] && (accounts[i].id == id)) {
 				accounts.splice(i, 1);
 				break;
 			}
@@ -164,11 +164,12 @@ function connect(id) {
 		let accounts = data ? JSON.parse(data) : [];
 		let account;
 		for (var i = 0; i < accounts.length; i++) {
-			if (accounts[i] && (!accounts[i].id || accounts[i].id == id)) {
+			if (accounts[i] && accounts[i].id == id) {
 				account = accounts[i];
 				break;
 			}
 		}
+		print(id, account);
 
 		if (account) {
 			let self = {account: account};
