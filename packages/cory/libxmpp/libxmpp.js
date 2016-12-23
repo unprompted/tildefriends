@@ -737,7 +737,6 @@ class XmppService {
 			self._socket.onError(self._reportError);
 			self._socket.read(function(data) {
 				try {
-					print(data.__prototype__ ? "YEAH!" : "nope");
 					if (!data) {
 						self._service.notifyStateChanged("disconnected");
 						return;

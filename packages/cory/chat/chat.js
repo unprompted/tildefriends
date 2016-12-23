@@ -319,7 +319,7 @@ function getConversation(session, conversationName) {
 		if (!gCurrentConversation) {
 			if (!gState.window) {
 				setWindow(session.account.id, key);
-			} else if (gState.window.account = session.account.id && gState.window.conversation == key) {
+			} else if (gState.window.account == session.account.id && gState.window.conversation == key) {
 				setWindow(session.account.id, key);
 			}
 		}
@@ -327,11 +327,10 @@ function getConversation(session, conversationName) {
 	return result;
 }
 
-async function printToConversation(conversation, message, notify) {
-	print(message);
+function printToConversation(conversation, message, notify) {
 	if (conversation == gCurrentConversation) {
 		if (message.action == "message") {
-			await printMessage(message.message);
+			printMessage(message.message);
 		} else if (message.action == "presence") {
 			if (message.presence == "unavailable") {
 				terminal.print(new Date().toString(), ": ", message.user, " has left the room.");
@@ -407,24 +406,16 @@ function niceTime(lastTime, thisTime) {
 	return result.join(" ");
 }
 
-async function formatMessage(message) {
+function formatMessage(message) {
 	var result;
 	if (typeof message == "string") {
 		result = [];
 		var regex = /(\w+:\/*\S+?)(?=(?:[\.!?])?(?:$|\s))/gi;
 		var match;
 		var lastIndex = 0;
-//		let libunfurl;
 		while ((match = regex.exec(message)) !== null) {
-//			if (!libunfurl) {
-//				libunfurl = await core.getService("libunfurl", "libunfurl");
-//			}
 			result.push({class: "base1", value: message.substring(lastIndex, match.index)});
-//			if (!libunfurl) {
-				result.push({href: match[0]});
-//			} else {
-//				result.push(await libunfurl.postMessage(match[0]));
-//			}
+			result.push({href: match[0]});
 			lastIndex = regex.lastIndex;
 		}
 		result.push({class: "base1", value: message.substring(lastIndex)});
@@ -435,7 +426,7 @@ async function formatMessage(message) {
 }
 
 var lastTimestamp = null;
-async function printMessage(message) {
+function printMessage(message) {
 	var now = message.timestamp || new Date().toString();
 	var from = message.from || "unknown";
 
@@ -446,7 +437,7 @@ async function printMessage(message) {
 		{class: "base3", value: from},
 		{class: "base00", value: ">"},
 		" ",
-		await formatMessage(message.message));
+		formatMessage(message.message));
 	lastTimestamp = now;
 }
 
@@ -463,9 +454,9 @@ core.register("blur", function() {
 core.register("key", function(event) {
 	if (event.type == "keydown") {
 		if (event.altKey) {
-			if (event.character == "I") {
+			if (event.character == "I" || event.keyCode == 38) {
 				cycleConversation(-1);
-			} else if (event.character == "K") {
+			} else if (event.character == "K" || event.keyCode == 40) {
 				cycleConversation(1);
 			}
 		}
