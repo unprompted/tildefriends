@@ -1,6 +1,6 @@
 "use strict";
 
-//! {"category": "libraries", "require": ["libhttp", "libxml"], "permissions": ["network"]}
+//! {"category": "libraries", "require": ["libencoding", "libhttp", "libxml"], "permissions": ["network"]}
 
 let libxml = require("libxml");
 let libhttp = require("libhttp");

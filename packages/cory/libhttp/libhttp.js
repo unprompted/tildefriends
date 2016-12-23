@@ -1,6 +1,11 @@
 "use strict";
 
-//! {"permissions": ["network"]}
+//! {
+//!   "permissions": ["network"],
+//!   "require": ["libencoding"]
+//! }
+
+require("libencoding");
 
 function parseUrl(url) {
 	// XXX: Hack.
@@ -37,33 +42,32 @@ function parseResponse(data) {
 
 function get(url) {
 	return new Promise(async function(resolve, reject) {
-		try {
-			let parsed = parseUrl(url);
-			if (!parsed) {
-				throw new Error("Failed to parse: " + url);
-			}
-			let buffer = "";
-
-			let socket = await network.newConnection();
-
-			await socket.connect(parsed.host, parsed.port);
-			socket.read(function(data) {
-				if (data) {
-					buffer += data;
-				} else {
-					resolve(parseResponse(buffer));
-				}
-			});
-
-			if (parsed.port == 443) {
-				await socket.startTls();
-			}
-
-			socket.write(`GET ${parsed.path} HTTP/1.0\r\nHost: ${parsed.host}\r\nConnection: close\r\n\r\n`);
-			//socket.close();
-		} catch(error) {
-			reject(error);
+		let parsed = parseUrl(url);
+		if (!parsed) {
+			throw new Error("Failed to parse: " + url);
 		}
+		let buffer = new Uint8Array(0);
+
+		let socket = await network.newConnection();
+
+		await socket.connect(parsed.host, parsed.port);
+		socket.read(function(data) {
+			if (data) {
+				let newBuffer = new Uint8Array(buffer.length + data.length);
+				newBuffer.set(buffer, 0);
+				newBuffer.set(data, buffer.length);
+				buffer = newBuffer;
+			} else {
+				resolve(parseResponse(new TextDecoder("UTF-8").decode(buffer)));
+				socket.close();
+			}
+		});
+
+		if (parsed.port == 443) {
+			await socket.startTls();
+		}
+
+		socket.write(`GET ${parsed.path} HTTP/1.0\r\nHost: ${parsed.host}\r\nConnection: close\r\n\r\n`);
 	});
 }
 
