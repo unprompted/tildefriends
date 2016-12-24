@@ -14,6 +14,7 @@ Connection.prototype.connect = function(host, port) {
 	let connection = this;
 	connection.close();
 	connection.socket = new Socket();
+	connection.socket.noDelay = true;
 	return connection.socket.connect(host, port).then(function() {
 		connection.buffer = "";
 		return Promise.all([

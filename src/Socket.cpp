@@ -41,6 +41,7 @@ Socket::Socket(Task* task) {
 	socketTemplate->SetAccessor(v8::String::NewFromUtf8(task->getIsolate(), "peerName"), getPeerName, 0, data);
 	socketTemplate->SetAccessor(v8::String::NewFromUtf8(task->getIsolate(), "peerCertificate"), getPeerCertificate, 0, data);
 	socketTemplate->SetAccessor(v8::String::NewFromUtf8(task->getIsolate(), "isConnected"), isConnected, 0, data);
+	socketTemplate->SetAccessor(v8::String::NewFromUtf8(task->getIsolate(), "noDelay"), getNoDelay, setNoDelay, data);
 
 	v8::Local<v8::Object> socketObject = socketTemplate->NewInstance();
 	socketObject->SetInternalField(0, v8::External::New(task->getIsolate(), this));
@@ -642,6 +643,20 @@ void Socket::getPeerCertificate(v8::Local<v8::String> property, const v8::Proper
 void Socket::isConnected(v8::Local<v8::String> property, const v8::PropertyCallbackInfo<v8::Value>& info) {
 	if (Socket* socket = Socket::get(info.Data())) {
 		info.GetReturnValue().Set(v8::Boolean::New(socket->_task->getIsolate(), socket->_connected));
+	}
+}
+
+void Socket::getNoDelay(v8::Local<v8::String> property, const v8::PropertyCallbackInfo<v8::Value>& info) {
+	if (Socket* socket = Socket::get(info.Data())) {
+		info.GetReturnValue().Set(v8::Boolean::New(info.GetIsolate(), socket->_noDelay));
+	}
+}
+
+void Socket::setNoDelay(v8::Local<v8::String> property, v8::Local<v8::Value> value, const v8::PropertyCallbackInfo<void>& info) {
+	v8::Maybe<bool> boolValue = value->BooleanValue(info.GetIsolate()->GetCurrentContext());
+	if (Socket* socket = Socket::get(info.Data())) {
+		socket->_noDelay = boolValue.IsJust() && boolValue.FromJust();
+		uv_tcp_nodelay(&socket->_socket, socket->_noDelay ? 1 : 0);
 	}
 }
 

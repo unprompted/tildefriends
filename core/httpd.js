@@ -403,6 +403,8 @@ function handleConnection(client) {
 		}
 	}
 
+	client.noDelay = true;
+
 	client.onError(function(error) {
 		logError(client.peerName + " - - [" + new Date() + "] " + error);
 	});

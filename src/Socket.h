@@ -31,6 +31,7 @@ private:
 	promiseid_t _closePromise = -1;
 	int _refCount = 1;
 	bool _connected = false;
+	bool _noDelay = false;
 	std::string _peerName;
 
 	enum Direction { kUndetermined, kAccept, kConnect };
@@ -61,6 +62,8 @@ private:
 	static void getPeerName(v8::Local<v8::String> property, const v8::PropertyCallbackInfo<v8::Value>& info);
 	static void getPeerCertificate(v8::Local<v8::String> property, const v8::PropertyCallbackInfo<v8::Value>& info);
 	static void isConnected(v8::Local<v8::String> property, const v8::PropertyCallbackInfo<v8::Value>& info);
+	static void getNoDelay(v8::Local<v8::String> property, const v8::PropertyCallbackInfo<v8::Value>& info);
+	static void setNoDelay(v8::Local<v8::String> property, v8::Local<v8::Value> value, const v8::PropertyCallbackInfo<void>& info);
 
 	static Socket* get(v8::Handle<v8::Value> socketObject);
 	static void onClose(uv_handle_t* handle);
