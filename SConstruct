@@ -21,7 +21,7 @@ Help(options.GenerateHelpText(env))
 
 v8 = env['v8']
 uv = env['uv']
-libObjects = []
+libs = []
 env.Append(CPPPATH=[
 	os.path.join(v8, 'include'),
 	v8,
@@ -32,7 +32,7 @@ env.Append(CPPPATH=[
 objectSuffix = '.obj' if sys.platform == 'win32' else '.o'
 raspi = platform.machine() == 'armv7l'
 if raspi:
-	libObjects += [
+	libs += [
 		os.path.join(v8, 'out', 'arm.release', 'obj.target', 'src', 'libv8_libplatform.a'),
 		os.path.join(v8, 'out', 'arm.release', 'obj.target', 'src', 'libv8_base.a'),
 		os.path.join(v8, 'out', 'arm.release', 'obj.target', 'src', 'libv8_libbase.a'),
@@ -42,13 +42,13 @@ if raspi:
 		os.path.join(v8, 'out', 'arm.release', 'obj.target', 'third_party', 'icu', 'libicuuc.a'),
 	]
 else:
-	libObjects += Glob(os.path.join(v8, 'out', 'obj', 'v8_base', '*' + objectSuffix))
-	libObjects += Glob(os.path.join(v8, 'out', 'obj', 'v8_libbase', '*' + objectSuffix))
-	libObjects += Glob(os.path.join(v8, 'out', 'obj', 'v8_libsampler', '*' + objectSuffix))
-	libObjects += Glob(os.path.join(v8, 'out', 'obj', 'v8_libplatform', '*' + objectSuffix))
-	libObjects += Glob(os.path.join(v8, 'out', 'obj', 'v8_nosnapshot', '*' + objectSuffix))
-	libObjects += Glob(os.path.join(v8, 'out', 'obj', 'third_party', 'icu', 'icui18n', '*' + objectSuffix))
-	libObjects += Glob(os.path.join(v8, 'out', 'obj', 'third_party', 'icu', 'icuuc', '*' + objectSuffix))
+	libs += env.Library('v8_libplatform', Glob(os.path.join(v8, 'out', 'obj', 'v8_libplatform', '*' + objectSuffix)))
+	libs += env.Library('v8_base', Glob(os.path.join(v8, 'out', 'obj', 'v8_base', '*' + objectSuffix)))
+	libs += env.Library('v8_libbase', Glob(os.path.join(v8, 'out', 'obj', 'v8_libbase', '*' + objectSuffix)))
+	libs += env.Library('v8_libsampler', Glob(os.path.join(v8, 'out', 'obj', 'v8_libsampler', '*' + objectSuffix)))
+	libs += env.Library('v8_nosnapshot', Glob(os.path.join(v8, 'out', 'obj', 'v8_nosnapshot', '*' + objectSuffix)))
+	libs += env.Library('icui18n', Glob(os.path.join(v8, 'out', 'obj', 'third_party', 'icu', 'icui18n', '*' + objectSuffix)))
+	libs += env.Library('icuuc', Glob(os.path.join(v8, 'out', 'obj', 'third_party', 'icu', 'icuuc', '*' + objectSuffix)))
 
 if sys.platform == 'win32':
 	env.Append(LIBS=['libuv', 'advapi32', 'winmm', 'wsock32', 'ws2_32', 'psapi', 'iphlpapi', 'userenv', 'user32', 'dbghelp', 'shlwapi'])
@@ -94,7 +94,7 @@ if sys.platform == 'darwin':
 	env.Append(FRAMEWORKS=['CoreFoundation', 'Security'])
 elif sys.platform == 'win32':
 	env.Append(LIBS=['Crypt32'])
-env.Program('tildefriends', source + libObjects)
+env.Program('tildefriends', source + libs)
 
 def listAllFiles(root):
 	for root, dirs, files in os.walk(root):
