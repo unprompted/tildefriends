@@ -15,15 +15,15 @@ class DatabaseList {
 		} if (listNode) {
 			listNode = JSON.parse(listNode);
 			listNode.count++;
-			let id = desiredKey;
-			if (id && await database.get(this._prefix + ":node:" + id.toString())) {
+			let id = this._prefix + ":node:" + desiredKey;
+			if (desiredKey && await database.get(id)) {
 				throw new Error("Key '" + desiredKey + "' already exists.");
 			}
-			if (!id) {
-				id = listNode.nextId++;
+			if (!desiredKey) {
+				id = this._prefix + ":node:" + listNode.nextId++;
 			}
 			if (end) {
-				let newKey = this._prefix + ":node:" + id.toString();
+				let newKey = id;
 				await database.set(newKey, JSON.stringify({next: key, previous: listNode.previous, value: item}));
 
 				if (listNode.previous !== key) {
@@ -39,10 +39,10 @@ class DatabaseList {
 					await database.set(key, JSON.stringify(listNode));
 				}
 			} else {
-				let newKey = listNode.key || id.toString();
+				let newKey = listNode.key ? (this._prefix + ":node:" + listNode.key) : id;
 				await database.set(newKey, JSON.stringify({next: listNode.next, previous: key, value: listNode.value}));
 				listNode.value = item;
-				listNode.key = id;
+				listNode.key = desiredKey;
 
 				if (listNode.next !== key) {
 					let next = JSON.parse(await database.get(listNode.next));
@@ -178,7 +178,7 @@ class DatabaseList {
 	}
 
 	async getByKey(key) {
-		let value = await database.get(this._prefix + ":node:" + key.toString());
+		let value = await database.get(this._prefix + (key ? ":node:" + key.toString() : ":head"));
 		if (value !== undefined) {
 			value = JSON.parse(value);
 		} else {
