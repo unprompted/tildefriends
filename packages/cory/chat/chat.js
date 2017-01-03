@@ -107,6 +107,7 @@ function configureAccount(id, updates) {
 		}
 
 		return Promise.all(promises).then(function() {
+			terminal.cork();
 			terminal.clear();
 			terminal.print(JSON.stringify(account));
 			terminal.print({input: "hidden", value: id, name: "id"});
@@ -119,7 +120,7 @@ function configureAccount(id, updates) {
 				terminal.print("Pick account type:");
 				for (let i in packages) {
 					let app = packages[i];
-					if (app.manifest && app.manifest.chat) {
+					if (app.manifest && app.manifest.chat && app.owner == core.user.name) {
 						terminal.print({command: "/command " + JSON.stringify({action: "updateAccount", id: id, type: app.name}), value: app.name});
 					}
 				}
@@ -140,6 +141,7 @@ function configureAccount(id, updates) {
 				}
 			}
 			terminal.print({input: "submit", value: "Save Account", name: "submit"});
+			terminal.uncork();
 		}).then(updateWindows);
 	}).catch(function(error) {
 		print("whoops", error);

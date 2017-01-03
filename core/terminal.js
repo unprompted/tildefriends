@@ -267,7 +267,7 @@ function handler(request, response, packageOwner, packageName, uri) {
 	if (!found) {
 		var process;
 		if (uri === "/view") {
-			var data = new TextDecode("UTF-8").decode(File.readFile("packages/" + packageOwner + "/" + packageName + "/" + packageName + ".js"));
+			var data = new TextDecoder("UTF-8").decode(File.readFile("packages/" + packageOwner + "/" + packageName + "/" + packageName + ".js"));
 			response.writeHead(200, {"Content-Type": "text/javascript; charset=utf-8", "Content-Length": data.length});
 			response.end(data);
 		} else if (uri == "/save") {

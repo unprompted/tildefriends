@@ -286,8 +286,12 @@ function printStructured(container, data) {
 				node.setAttribute("srcdoc", data.iframe);
 			}
 			node.setAttribute("sandbox", "allow-forms allow-scripts allow-top-navigation allow-same-origin");
-			node.setAttribute("width", data.width || 320);
-			node.setAttribute("height", data.height || 240);
+			if (data.width !== null) {
+				node.setAttribute("width", data.width || 320);
+			}
+			if (data.height !== null) {
+				node.setAttribute("height", data.height || 240);
+			}
 			if (data.name) {
 				node.setAttribute("id", "iframe_" + data.name);
 			}
