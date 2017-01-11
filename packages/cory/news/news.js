@@ -8,6 +8,9 @@
 	list feed:username,url {id, title, modified, read, ...}
 */
 
+// [ ] New news article is posted.
+// [ ] Existing news article is updated.
+
 let http = require("libhttp");
 let liblist = require("liblist");
 let xml = require("libxml");
@@ -198,16 +201,18 @@ class TestInterface {
 			terminal.select("headlines");
 			terminal.clear();
 			this.news.forEach((article, index) => {
-				let color = "";
-				if (this.selectedIndex == index) {
-					color = "red";
-				} else if (article.read) {
-					color = "gray";
+				if (Math.abs(index - this.selectedIndex) < 5) {
+					let color = "";
+					if (this.selectedIndex == index) {
+						color = "red";
+					} else if (article.read) {
+						color = "gray";
+					}
+					terminal.print(article.modified.toString(), " ", {
+						style: color ? ("color: " + color) : "",
+						value: article.title,
+					});
 				}
-				terminal.print(article.modified.toString(), " ", {
-					style: color ? ("color: " + color) : "",
-					value: article.title,
-				});
 			});
 			terminal.select("view");
 			terminal.clear();
@@ -242,7 +247,7 @@ class TestInterface {
 	async activate() {
 		let self = this;
 		terminal.split([
-			{name: "headlines", basis: "30%", grow: 0, shrink: 1},
+			{name: "headlines", basis: "11rem", grow: 0, shrink: 1},
 			{name: "view", style: "display: flex", basis: "70%", grow: 2, shrink: 0},
 		]);
 		self.refreshNews().then(self.redisplay.bind(self)).catch(terminal.print);

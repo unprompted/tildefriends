@@ -219,8 +219,8 @@ function updateWindows() {
 				for (let j in conversations) {
 					terminal.print({
 						command: "/command " + JSON.stringify({action: "window", account: account.id, conversation: j}),
-						value: j ? j : "<service>",
-						style: (conversations[j] == gCurrentConversation ? "font-weight: bold; " : "") + "color: white",
+						value: (j ? j : "<service>") + (conversations[j].unread ? " (" + conversations[j].unread + ")" : ""),
+						style: (conversations[j] == gCurrentConversation ? "background-color: white; color: black" : ""),
 					});
 				}
 			}
@@ -252,15 +252,16 @@ function updateConversation() {
 				terminal.clear();
 				printToConversation(gCurrentConversation, ["[", gCurrentConversation.name, "]"]);
 				if (history) {
-					let previous = Promise.resolve();
 					for (let message of history) {
-						previous = previous.then(x => printToConversation(gCurrentConversation, message));
+						printToConversation(gCurrentConversation, message);
 					}
 				}
 				updateUsers();
 			} finally {
 				terminal.uncork();
 			}
+			gCurrentConversation.unread = 0;
+			updateWindows();
 		}).catch(function(error) {
 			terminal.print(error);
 		});
@@ -313,6 +314,7 @@ function getConversation(session, conversationName) {
 				return session.sendMessage(key, message);
 			},
 			participants: [],
+			unread: 0,
 		};
 		updateWindows();
 	}
@@ -342,6 +344,9 @@ function printToConversation(conversation, message, notify) {
 		} else {
 			terminal.print(message);
 		}
+	} else {
+		conversation.unread++;
+		updateWindows();
 	}
 	if (notify && !gFocus) {
 		gUnread++;

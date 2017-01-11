@@ -32,6 +32,7 @@ class IrcService {
 		self._service = new ChatService(options.callback);
 		self._name = options.name;
 		self._nick = options.nick;
+		self._autoJoinChannels = options.autoJoinChannels;
 		self._nameReplies = {};
 
 		network.newConnection().then(function(socket) {
@@ -102,6 +103,10 @@ class IrcService {
 				let conversations = this._service.getConversations();
 				for (let i in conversations) {
 					this._service.notifyPresenceChanged(conversations[i], person, "unavailable");
+				}
+			} else if (parts[0] == "001") { // RPL_WELCOME
+				if (this._autoJoinChannels) {
+					this._send("JOIN " + this._autoJoinChannels);
 				}
 			} else if (parts[0] == "353") { // RPL_NAMREPLY
 				if (!this._nameReplies[parts[3]]) {
