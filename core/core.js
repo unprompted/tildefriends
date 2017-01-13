@@ -105,7 +105,7 @@ function databaseGetAll() {
 	return getDatabase(this).getAll();
 }
 
-function getPackages() {
+async function getPackages() {
 	var packages = [];
 	var packageOwners = File.readDirectory("packages/");
 	for (var i = 0; i < packageOwners.length; i++) {
@@ -116,7 +116,7 @@ function getPackages() {
 					packages.push({
 						owner: packageOwners[i],
 						name: packageNames[j],
-						manifest: getManifest("packages/" + packageOwners[i] + "/" + packageNames[j] + "/" + packageNames[j] + ".js"),
+						manifest: await getManifest("packages/" + packageOwners[i] + "/" + packageNames[j] + "/" + packageNames[j] + ".js"),
 					});
 				}
 			}
@@ -195,7 +195,17 @@ function readFileUtf8(fileName) {
 	return new TextDecoder("UTF-8").decode(File.readFile(fileName));
 }
 
-function getManifest(fileName) {
+let gManifestCache = {};
+
+async function getManifest(fileName) {
+	let oldEntry = gManifestCache[fileName];
+	let stat = await File.stat(fileName);
+	if (oldEntry) {
+		if (oldEntry.stat.mtime == stat.mtime && oldEntry.stat.size == stat.size) {
+			return oldEntry.manifest;
+		}
+	}
+
 	let manifest = [];
 	let lines = readFileUtf8(fileName).split("\n").map(x => x.trimRight());
 	for (let i = 0; i < lines.length; i++) {
@@ -212,6 +222,12 @@ function getManifest(fileName) {
 		print("ERROR: getManifest(" + fileName + "): ", error);
 		// Oh well.  No manifest.
 	}
+
+	gManifestCache[fileName] = {
+		stat: stat,
+		manifest: result,
+	};
+
 	return result;
 }
 
@@ -220,7 +236,7 @@ function packageNameToPath(name) {
 	return "packages/" + process.packageOwner + "/" + name + "/";
 }
 
-function getProcess(packageOwner, packageName, key, options) {
+async function getProcess(packageOwner, packageName, key, options) {
 	var process = gProcesses[key];
 	if (!process
 		&& !(options && "create" in options && !options.create)
@@ -229,7 +245,7 @@ function getProcess(packageOwner, packageName, key, options) {
 		try {
 			print("Creating task for " + packageName + " " + key);
 			var fileName = "packages/" + packageOwner + "/" + packageName + "/" + packageName + ".js";
-			var manifest = getManifest(fileName);
+			var manifest = await getManifest(fileName);
 			process = {};
 			process.key = key;
 			process.index = gProcessIndex++;

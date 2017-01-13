@@ -1,6 +1,7 @@
 #include "File.h"
 
 #include "Task.h"
+#include "TaskTryCatch.h"
 
 #include <cstring>
 #include <fstream>
@@ -14,6 +15,14 @@
 #include <unistd.h>
 #endif
 
+double timeSpecToDouble(uv_timespec_t& timeSpec);
+
+struct FileStatData {
+	Task* _task;
+	promiseid_t _promise;
+	uv_fs_t _request;
+};
+
 void File::configure(v8::Isolate* isolate, v8::Handle<v8::ObjectTemplate> global) {
 	v8::Local<v8::ObjectTemplate> fileTemplate = v8::ObjectTemplate::New(isolate);
 	fileTemplate->Set(v8::String::NewFromUtf8(isolate, "readFile"), v8::FunctionTemplate::New(isolate, readFile));
@@ -22,6 +31,7 @@ void File::configure(v8::Isolate* isolate, v8::Handle<v8::ObjectTemplate> global
 	fileTemplate->Set(v8::String::NewFromUtf8(isolate, "writeFile"), v8::FunctionTemplate::New(isolate, writeFile));
 	fileTemplate->Set(v8::String::NewFromUtf8(isolate, "renameFile"), v8::FunctionTemplate::New(isolate, renameFile));
 	fileTemplate->Set(v8::String::NewFromUtf8(isolate, "unlinkFile"), v8::FunctionTemplate::New(isolate, unlinkFile));
+	fileTemplate->Set(v8::String::NewFromUtf8(isolate, "stat"), v8::FunctionTemplate::New(isolate, stat));
 	global->Set(v8::String::NewFromUtf8(isolate, "File"), fileTemplate);
 }
 
@@ -133,4 +143,49 @@ void File::makeDirectory(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	uv_fs_t req;
 	int result = uv_fs_mkdir(task->getLoop(), &req, *v8::String::Utf8Value(directory), 0755, 0);
 	args.GetReturnValue().Set(result);
+}
+
+void File::stat(const v8::FunctionCallbackInfo<v8::Value>& args) {
+	if (Task* task = Task::get(args.GetIsolate())) {
+		v8::HandleScope scope(args.GetIsolate());
+		v8::Handle<v8::String> path = args[0]->ToString();
+
+		promiseid_t promise = task->allocatePromise();
+
+		FileStatData* data = new FileStatData;
+		data->_task = task;
+		data->_promise = promise;
+		data->_request.data = data;
+
+		int result = uv_fs_stat(task->getLoop(), &data->_request, *v8::String::Utf8Value(path), onStatComplete);
+		if (result) {
+			task->resolvePromise(promise, v8::Number::New(args.GetIsolate(), result));
+			delete data;
+		}
+		args.GetReturnValue().Set(task->getPromise(promise));
+	}
+}
+
+double timeSpecToDouble(uv_timespec_t& timeSpec) {
+	return timeSpec.tv_sec + static_cast<double>(timeSpec.tv_nsec) / 1e9;
+}
+
+void File::onStatComplete(uv_fs_t* request) {
+	FileStatData* data = reinterpret_cast<FileStatData*>(request->data);
+	v8::EscapableHandleScope scope(data->_task->getIsolate());
+	TaskTryCatch tryCatch(data->_task);
+	v8::Isolate* isolate = data->_task->getIsolate();
+	v8::Context::Scope contextScope(v8::Local<v8::Context>::New(isolate, data->_task->getContext()));
+
+	if (request->result) {
+		data->_task->rejectPromise(data->_promise, v8::Number::New(data->_task->getIsolate(), request->result));
+	} else {
+		v8::Handle<v8::Object> result = v8::Object::New(isolate);
+		result->Set(v8::String::NewFromUtf8(isolate, "mtime"), v8::Number::New(isolate, timeSpecToDouble(request->statbuf.st_mtim)));
+		result->Set(v8::String::NewFromUtf8(isolate, "ctime"), v8::Number::New(isolate, timeSpecToDouble(request->statbuf.st_ctim)));
+		result->Set(v8::String::NewFromUtf8(isolate, "atime"), v8::Number::New(isolate, timeSpecToDouble(request->statbuf.st_atim)));
+		result->Set(v8::String::NewFromUtf8(isolate, "size"), v8::Number::New(isolate, request->statbuf.st_size));
+		data->_task->resolvePromise(data->_promise, result);
+	}
+	delete data;
 }

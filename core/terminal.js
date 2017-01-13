@@ -143,7 +143,7 @@ function socket(request, response, client) {
 	}
 	options.credentials = credentials;
 
-	response.onMessage = function(event) {
+	response.onMessage = async function(event) {
 		if (event.opCode == 0x1 || event.opCode == 0x2) {
 			var message;
 			try {
@@ -164,7 +164,7 @@ function socket(request, response, client) {
 				response.send(JSON.stringify({lines: [{action: "session", sessionId: sessionId, credentials: credentials}]}), 0x1);
 
 				options.terminalApi = message.terminalApi || [];
-				process = getSessionProcess(packageOwner, packageName, sessionId, options);
+				process = await getSessionProcess(packageOwner, packageName, sessionId, options);
 				process.terminal.readOutput(function(message) {
 					response.send(JSON.stringify(message), 0x1);
 				});
@@ -226,7 +226,7 @@ function socket(request, response, client) {
 	}
 }
 
-function handler(request, response, packageOwner, packageName, uri) {
+async function handler(request, response, packageOwner, packageName, uri) {
 	var found = false;
 
 	if (badName(packageOwner) || badName(packageName)) {
@@ -292,7 +292,7 @@ function handler(request, response, packageOwner, packageName, uri) {
 				}
 			}
 		} else if (uri === "/submit") {
-				var process = getServiceProcess(packageOwner, packageName, "submit");
+				var process = await getServiceProcess(packageOwner, packageName, "submit");
 				process.lastActive = Date.now();
 				return process.ready.then(function() {
 					var payload = form.decodeForm(request.body, form.decodeForm(request.query));
@@ -308,7 +308,7 @@ function handler(request, response, packageOwner, packageName, uri) {
 					});
 				});
 		} else if (uri === "/atom") {
-			var process = getServiceProcess(packageOwner, packageName, "atom");
+			var process = await getServiceProcess(packageOwner, packageName, "atom");
 			process.lastActive = Date.now();
 			return process.ready.then(function() {
 				var payload = form.decodeForm(request.body, form.decodeForm(request.query));
