@@ -1,3 +1,5 @@
+# This repository has moved to https://dev.tildefriends.net/cory/tildefriends
+
 # Tilde Friends
 Tilde Friends is a program that aims to securely host pure JavaScript web applications.
 
